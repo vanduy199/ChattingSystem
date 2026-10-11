@@ -22,7 +22,6 @@ public class FirebaseConfig {
     @Bean(destroyMethod = "delete")
     public FirebaseApp firebaseApp(FirebaseProperties props) throws IOException {
 
-        // Tránh khởi tạo trùng (hot reload, test context...)
         for (FirebaseApp app : FirebaseApp.getApps()) {
             if (FirebaseApp.DEFAULT_APP_NAME.equals(app.getName())) {
                 return app;

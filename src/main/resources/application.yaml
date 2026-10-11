@@ -31,7 +31,7 @@ spring:
       enabled: false
 
 firebase:
-  service-account-path: ${FIREBASE_SERVICE_ACCOUNT}
+  service-account: ${FIREBASE_SERVICE_ACCOUNT}
 
 jwt:
   secret-key: ${JWT_SECRET_KEY}

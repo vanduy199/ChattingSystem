@@ -10,19 +10,17 @@ import com.google.firebase.messaging.FirebaseMessaging;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.ResourceLoader;
-
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 
 @Slf4j
 @Configuration
 public class FirebaseConfig {
 
     @Bean(destroyMethod = "delete")
-    public FirebaseApp firebaseApp(FirebaseProperties props,
-                                   ResourceLoader resourceLoader) throws IOException {
+    public FirebaseApp firebaseApp(FirebaseProperties props) throws IOException {
 
         // Tránh khởi tạo trùng (hot reload, test context...)
         for (FirebaseApp app : FirebaseApp.getApps()) {
@@ -31,13 +29,12 @@ public class FirebaseConfig {
             }
         }
 
-        Resource resource = resourceLoader.getResource(props.serviceAccount());
-        if (!resource.exists()) {
-            throw new IllegalStateException(
-                    "Không tìm thấy Firebase service account tại: " + props.serviceAccount());
+        String serviceAccountJson = props.serviceAccount();
+        if (serviceAccountJson == null || serviceAccountJson.isBlank()) {
+            throw new IllegalStateException("Firebase service account JSON is missing");
         }
 
-        try (InputStream in = resource.getInputStream()) {
+        try (InputStream in = new ByteArrayInputStream(serviceAccountJson.getBytes(StandardCharsets.UTF_8))) {
             FirebaseOptions.Builder builder = FirebaseOptions.builder()
                     .setCredentials(GoogleCredentials.fromStream(in));
 

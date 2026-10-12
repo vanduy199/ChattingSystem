@@ -1,3 +1,7 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /api/v1
 
 spring:
   application:
@@ -37,6 +41,3 @@ jwt:
   secret-key: ${JWT_SECRET_KEY}
   access-token-expiration: ${JWT_ACCESS_EXPIRATION:15m}
   refresh-expiration: ${JWT_REFRESH_EXPIRATION:30d}
-
-server:
-  port: 8080

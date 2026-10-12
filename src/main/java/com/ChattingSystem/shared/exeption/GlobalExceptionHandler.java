@@ -5,8 +5,11 @@ import com.ChattingSystem.shared.response.FieldErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import jakarta.validation.ConstraintViolationException;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
 
 import java.time.LocalDateTime;
 import java.util.Collections;
@@ -28,7 +31,95 @@ public class GlobalExceptionHandler {
         );
     }
 
+    // =========================================================
+    // Validation - @RequestBody
+    // =========================================================
 
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ErrorResponse> handleValidationException(
+            MethodArgumentNotValidException exception,
+            HttpServletRequest request
+    ) {
+
+        List<FieldErrorResponse> errors = exception
+                .getBindingResult()
+                .getFieldErrors()
+                .stream()
+                .map(fieldError ->
+                        new FieldErrorResponse(
+                                fieldError.getField(),
+                                fieldError.getDefaultMessage()
+                        )
+                )
+                .toList();
+
+        return buildResponse(
+                ErrorCode.VALIDATION_ERROR,
+                request,
+                errors
+        );
+    }
+
+    // =========================================================
+    // Validation - @RequestParam / @PathVariable
+    // =========================================================
+
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<ErrorResponse> handleConstraintViolation(
+            ConstraintViolationException exception,
+            HttpServletRequest request
+    ) {
+
+        List<FieldErrorResponse> errors = exception
+                .getConstraintViolations()
+                .stream()
+                .map(violation ->
+                        new FieldErrorResponse(
+                                violation.getPropertyPath().toString(),
+                                violation.getMessage()
+                        )
+                )
+                .toList();
+
+        return buildResponse(
+                ErrorCode.VALIDATION_ERROR,
+                request,
+                errors
+        );
+    }
+
+    // =========================================================
+    // Validation - Handler Method
+    // =========================================================
+
+    @ExceptionHandler(HandlerMethodValidationException.class)
+    public ResponseEntity<ErrorResponse> handleHandlerMethodValidation(
+            HandlerMethodValidationException exception,
+            HttpServletRequest request
+    ) {
+
+        List<FieldErrorResponse> errors = exception
+                .getParameterValidationResults()
+                .stream()
+                .flatMap(result ->
+                        result.getResolvableErrors()
+                                .stream()
+                                .map(error ->
+                                        new FieldErrorResponse(
+                                                result.getMethodParameter()
+                                                        .getParameterName(),
+                                                error.getDefaultMessage()
+                                        )
+                                )
+                )
+                .toList();
+
+        return buildResponse(
+                ErrorCode.VALIDATION_ERROR,
+                request,
+                errors
+        );
+    }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleUnexpectedException(

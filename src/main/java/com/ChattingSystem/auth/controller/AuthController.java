@@ -18,7 +18,7 @@ public class AuthController {
         this.authService = authService;
     }
 
-    @PostMapping("/firebase-login")
+    @PostMapping("/login")
     public ResponseEntity<ApiResponse<LoginResult>> login(@Valid @RequestBody FirebaseLoginRequest request) {
         LoginResult loginResult = authService.firebaseLogin(request);
         return ResponseEntity.ok(ApiResponse.success("Đăng nhập thành công!",loginResult));

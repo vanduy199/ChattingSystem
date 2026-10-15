@@ -2,10 +2,13 @@ package com.ChattingSystem.auth.controller;
 
 import com.ChattingSystem.auth.dto.request.FirebaseLoginRequest;
 import com.ChattingSystem.auth.dto.response.LoginResult;
+import com.ChattingSystem.auth.dto.response.MeResponse;
 import com.ChattingSystem.auth.service.AuthService;
 import com.ChattingSystem.shared.response.ApiResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -25,7 +28,8 @@ public class AuthController {
     }
 
     @GetMapping("/me")
-    public ResponseEntity<String> me() {
-        return ResponseEntity.ok("JWT authentication successful");
+    public ResponseEntity<ApiResponse<MeResponse>> me(@AuthenticationPrincipal Jwt jwt) {
+        MeResponse me = authService.getCurrentUser(jwt.getSubject());
+        return ResponseEntity.ok(ApiResponse.success("Lấy thông tin người dùng thành công", me));
     }
 }

@@ -5,7 +5,15 @@ import com.ChattingSystem.shared.response.FieldErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import jakarta.validation.ConstraintViolationException;
@@ -27,7 +35,8 @@ public class GlobalExceptionHandler {
         return buildResponse(
                 exception.getErrorCode(),
                 exception.getMessage(),
-                request
+                request,
+                exception.getErrors()
         );
     }
 
@@ -121,6 +130,60 @@ public class GlobalExceptionHandler {
         );
     }
 
+    // =========================================================
+    // Malformed requests / routing
+    // =========================================================
+
+    @ExceptionHandler({
+            HttpMessageNotReadableException.class,
+            HttpMediaTypeNotSupportedException.class,
+            MethodArgumentTypeMismatchException.class,
+            MissingServletRequestParameterException.class,
+            MissingServletRequestPartException.class
+    })
+    public ResponseEntity<ErrorResponse> handleMalformedRequest(
+            Exception exception,
+            HttpServletRequest request
+    ) {
+        return buildResponse(
+                ErrorCode.MALFORMED_REQUEST,
+                request
+        );
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ErrorResponse> handleMaxUploadSize(
+            MaxUploadSizeExceededException exception,
+            HttpServletRequest request
+    ) {
+        return buildResponse(
+                ErrorCode.FILE_TOO_LARGE,
+                request
+        );
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNoResourceFound(
+            NoResourceFoundException exception,
+            HttpServletRequest request
+    ) {
+        return buildResponse(
+                ErrorCode.RESOURCE_NOT_FOUND,
+                request
+        );
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ErrorResponse> handleMethodNotSupported(
+            HttpRequestMethodNotSupportedException exception,
+            HttpServletRequest request
+    ) {
+        return buildResponse(
+                ErrorCode.METHOD_NOT_ALLOWED,
+                request
+        );
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleUnexpectedException(
             Exception exception,
@@ -173,7 +236,8 @@ public class GlobalExceptionHandler {
     private ResponseEntity<ErrorResponse> buildResponse(
             ErrorCode errorCode,
             String message,
-            HttpServletRequest request
+            HttpServletRequest request,
+            List<FieldErrorResponse> errors
     ) {
 
         ErrorResponse response = new ErrorResponse(
@@ -181,7 +245,7 @@ public class GlobalExceptionHandler {
                 message,
                 request.getRequestURI(),
                 LocalDateTime.now(),
-                Collections.emptyList()
+                errors
         );
 
         return ResponseEntity

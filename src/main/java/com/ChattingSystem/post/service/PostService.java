@@ -20,6 +20,7 @@ public interface PostService {
     List<PostSlugResponse> getPublishedSlugs();
 
     // Admin (all statuses)
+    // test github
 
     PageResponse<PostSummaryResponse> getPosts(int page, int size, PostStatus status);
 

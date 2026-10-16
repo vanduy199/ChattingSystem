@@ -20,7 +20,7 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(POST, "/auth/firebase-login").permitAll()
+                        .requestMatchers(POST, "/auth/login").permitAll()
                         .anyRequest().authenticated()
                 )
                 .oauth2ResourceServer(

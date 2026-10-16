@@ -35,7 +35,7 @@ public class JwtService {
                         jwtProperties.accessTokenExpiration()
                 ))
                 .claim("userId", user.getId())
-                .claim("scope", "USER")
+                .claim("scope", scopeOf(user))
                 .build();
 
         JwsHeader header = JwsHeader
@@ -45,5 +45,10 @@ public class JwtService {
         return jwtEncoder.encode(
                 JwtEncoderParameters.from(header, claims)
         ).getTokenValue();
+    }
+
+    /** Space-separated scopes, mapped to {@code SCOPE_*} authorities by {@code JwtConfig}. */
+    private static String scopeOf(User user) {
+        return user.isAdmin() ? "USER ADMIN" : "USER";
     }
 }

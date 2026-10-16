@@ -2,6 +2,7 @@ package com.ChattingSystem.auth.service.impl;
 
 import com.ChattingSystem.auth.dto.request.FirebaseLoginRequest;
 import com.ChattingSystem.auth.dto.response.LoginResult;
+import com.ChattingSystem.auth.dto.response.MeResponse;
 import com.ChattingSystem.auth.service.AuthService;
 import com.ChattingSystem.security.jwt.JwtService;
 import com.ChattingSystem.shared.exeption.AppException;
@@ -75,5 +76,13 @@ public class AuthServiceImpl implements AuthService {
                 "Bearer",
                 expiresInSeconds
         );
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public MeResponse getCurrentUser(String firebaseUid) {
+        User user = userRepository.findByFirebaseUid(firebaseUid)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+        return MeResponse.from(user);
     }
 }

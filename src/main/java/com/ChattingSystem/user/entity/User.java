@@ -3,6 +3,8 @@ package com.ChattingSystem.user.entity;
 import com.ChattingSystem.shared.entity.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -31,6 +33,10 @@ public class User extends BaseEntity {
     @Column(name = "phone", length = 20)
     private String phone;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "role", nullable = false, length = 20)
+    private Role role;
+
     private User(String firebaseUid,
                  String email,
                  String fullName,
@@ -42,6 +48,7 @@ public class User extends BaseEntity {
         this.fullName = Objects.requireNonNull(fullName);
         this.avatarObject = avatarObject;
         this.phone = phone;
+        this.role = Role.USER;
     }
 
     public static User create(
@@ -67,5 +74,13 @@ public class User extends BaseEntity {
 
     public void updateAvatar(String avatarObject) {
         this.avatarObject = avatarObject;
+    }
+
+    public void changeRole(Role role) {
+        this.role = Objects.requireNonNull(role);
+    }
+
+    public boolean isAdmin() {
+        return role == Role.ADMIN;
     }
 }

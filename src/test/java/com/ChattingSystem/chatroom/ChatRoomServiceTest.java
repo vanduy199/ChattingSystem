@@ -1,9 +1,9 @@
 package com.ChattingSystem.chatroom;
 
-import com.ChattingSystem.chatroom.dto.CreateRoomRequest;
-import com.ChattingSystem.chatroom.dto.RoomResponse;
+import com.ChattingSystem.chatroom.dto.request.CreateRoomRequest;
+import com.ChattingSystem.chatroom.dto.response.RoomResponse;
 import com.ChattingSystem.chatroom.entity.RoomStatus;
-import com.ChattingSystem.chatroom.service.ChatRoomService;
+import com.ChattingSystem.chatroom.service.impl.ChatRoomServiceImpl;
 import com.ChattingSystem.user.entity.User;
 import com.ChattingSystem.user.repository.UserRepository;
 import jakarta.persistence.EntityManager;
@@ -16,6 +16,13 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
+import com.ChattingSystem.chatroom.dto.response.JoinRoomResponse;
+import com.ChattingSystem.chatroom.entity.MemberRole;
+import com.ChattingSystem.shared.exeption.AppException;
+import com.ChattingSystem.shared.exeption.ErrorCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -27,7 +34,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @Transactional
 class ChatRoomServiceTest {
 
-    @Autowired private ChatRoomService service;
+    @Autowired private ChatRoomServiceImpl service;
     @Autowired private UserRepository userRepo;
     @Autowired private EntityManager em;
 
@@ -88,5 +95,97 @@ class ChatRoomServiceTest {
         assertThat(res.radiusM()).isEqualTo(3000);
         assertThat(res.expiresAt()).isBetween(
                 before.plus(60, ChronoUnit.MINUTES), after.plus(60, ChronoUnit.MINUTES));
+    }
+
+    @Test
+    void joinRoom_success_shouldSaveMember() {
+        User owner = newUser();
+        User member = newUser();
+
+        CreateRoomRequest req = new CreateRoomRequest(
+                "Phong test join",
+                "Phong dung de test",
+                21.0285,
+                105.8542,
+                120,
+                2000
+        );
+
+        RoomResponse room = service.createRoom(owner.getId(), req);
+
+        JoinRoomResponse response =
+                service.joinRoom(member.getId(), room.id());
+
+        assertThat(response.roomId()).isEqualTo(room.id());
+        assertThat(response.userId()).isEqualTo(member.getId());
+        assertThat(response.role()).isEqualTo(MemberRole.MEMBER);
+        assertThat(response.joinedAt()).isNotNull();
+
+        Long count = ((Number) em.createNativeQuery("""
+            SELECT COUNT(*)
+            FROM room_members
+            WHERE room_id = :roomId
+              AND user_id = :userId
+            """)
+                .setParameter("roomId", room.id())
+                .setParameter("userId", member.getId())
+                .getSingleResult()).longValue();
+
+        assertThat(count).isEqualTo(1L);
+    }
+
+
+    @Test
+    void joinRoom_roomNotFound_shouldThrowException() {
+        User user = newUser();
+        Long roomId = -999L;
+
+        assertThatThrownBy(() ->
+                service.joinRoom(user.getId(), roomId))
+                .isInstanceOfSatisfying(AppException.class, ex ->
+                        assertThat(ex.getErrorCode())
+                                .isEqualTo(ErrorCode.ROOM_NOT_FOUND)
+                );
+    }
+
+    @Test
+    void joinRoom_expiredRoom_shouldThrowException() {
+        User owner = newUser();
+        User member = newUser();
+
+        CreateRoomRequest req = new CreateRoomRequest(
+                "Phong da het han",
+                null,
+                21.0,
+                105.0,
+                60,
+                2000
+        );
+
+        RoomResponse room = service.createRoom(owner.getId(), req);
+
+        // Giả lập phòng đã hết hạn
+        em.createNativeQuery("""
+            UPDATE chat_rooms
+            SET expires_at = :expiredAt
+            WHERE id = :roomId
+            """)
+                .setParameter(
+                        "expiredAt",
+                        Instant.now().minus(10, ChronoUnit.MINUTES)
+                )
+                .setParameter("roomId", room.id())
+                .executeUpdate();
+
+        em.flush();
+        em.clear();
+
+        // Kiểm tra đúng mã lỗi
+        assertThatThrownBy(() ->
+                service.joinRoom(member.getId(), room.id()))
+                .isInstanceOfSatisfying(AppException.class, ex ->
+                        assertThat(ex.getErrorCode())
+                                .isEqualTo(ErrorCode.ROOM_EXPIRED)
+                );
     }
 }

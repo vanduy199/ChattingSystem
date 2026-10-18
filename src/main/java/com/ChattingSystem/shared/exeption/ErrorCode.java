@@ -15,6 +15,18 @@ public enum ErrorCode {
     METHOD_NOT_ALLOWED(HttpStatus.METHOD_NOT_ALLOWED, "Phương thức không được hỗ trợ"),
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "Không tìm thấy người dùng"),
     POST_NOT_FOUND(HttpStatus.NOT_FOUND, "Không tìm thấy bài viết"),
+    ROOM_NOT_FOUND(HttpStatus.NOT_FOUND,"Không tìm thấy phòng chat"),
+    ROOM_MEMBER_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "Bạn chưa tham gia phòng chat này"
+    ),
+
+    OWNER_CANNOT_LEAVE_ROOM(
+            HttpStatus.FORBIDDEN,
+            "Chủ phòng không thể rời khỏi phòng"
+    ),
+    ROOM_EXPIRED(HttpStatus.GONE, "Phòng chat đã hết hạn hoặc không còn hoạt động"),
+    ALREADY_JOINED_ROOM(HttpStatus.CONFLICT, "Bạn đã tham gia phòng chat này rồi"),
     POST_SLUG_EXISTS(HttpStatus.CONFLICT, "Slug bài viết đã tồn tại"),
     INVALID_FILE(HttpStatus.BAD_REQUEST, "Tệp không hợp lệ. Chỉ chấp nhận ảnh JPEG, PNG, WebP, AVIF hoặc GIF"),
     FILE_TOO_LARGE(HttpStatus.PAYLOAD_TOO_LARGE, "Tệp vượt quá dung lượng cho phép (5 MB)"),

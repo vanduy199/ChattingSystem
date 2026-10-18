@@ -1,4 +1,4 @@
-package com.ChattingSystem.chatroom.dto;
+package com.ChattingSystem.chatroom.dto.request;
 
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;

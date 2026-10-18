@@ -1,4 +1,4 @@
-package com.ChattingSystem.chatroom.dto;
+package com.ChattingSystem.chatroom.dto.response;
 
 import com.ChattingSystem.chatroom.entity.RoomStatus;
 

@@ -29,6 +29,8 @@ There is no linter/formatter configured.
 - `server.port` is `${PORT:8080}` (Railway injects `PORT`).
 - CORS origins: `CORS_ALLOWED_ORIGINS` (comma separated) → `cors.allowed-origins` (`CorsProperties`), used by `config/CorsConfig`.
 - Image storage (Cloudflare R2 via S3 API): `STORAGE_ENDPOINT`, `STORAGE_REGION` (default `auto`), `STORAGE_BUCKET`, `STORAGE_ACCESS_KEY`, `STORAGE_SECRET_KEY`, `STORAGE_PUBLIC_BASE_URL` → `StorageProperties` (prefix `storage`). The `S3Client` bean only exists when `STORAGE_ENDPOINT` is non-blank; otherwise uploads return 503 `STORAGE_NOT_CONFIGURED` but the app still starts. Multipart limit is 5 MB per file.
+- Redis: `REDIS_URL` → `spring.data.redis.url` (default `redis://localhost:6379`), used by `shared.redis.RedisService`.
+- Railway: `railway.toml` builds from the `Dockerfile` and health-checks `GET /api/v1/tags`. Set every var from `.env.example` on the service; `REDIS_URL` can reference a Railway Redis service (`${{Redis.REDIS_URL}}`).
 - `JWT_SECRET_KEY` is used directly as the HMAC-SHA256 key, so it must be ≥ 32 bytes. Expirations are `Duration` strings (`15m`, `30d`). `refreshExpiration` is defined but refresh tokens aren't implemented yet (`HashToken` is a prepared helper for storing hashed tokens).
 - Typed config lives in `shared/properties` as `@ConfigurationProperties` records, picked up by `@ConfigurationPropertiesScan` on the main class.
 

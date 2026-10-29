@@ -31,6 +31,8 @@ public class SecurityConfig {
                         .requestMatchers(GET, "/posts", "/posts/**", "/tags").permitAll()
                         .requestMatchers(POST, "/waitlist").permitAll()
                         .requestMatchers("/error").permitAll()
+                        // Handshake WebSocket: JWT được kiểm tra ở frame STOMP CONNECT (StompAuthChannelInterceptor)
+                        .requestMatchers("/ws", "/ws/**").permitAll()
                         .requestMatchers("/admin/**").hasAuthority("SCOPE_ADMIN")
                         .anyRequest().authenticated()
                 )

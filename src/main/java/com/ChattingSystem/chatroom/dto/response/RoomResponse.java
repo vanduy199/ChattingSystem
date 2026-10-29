@@ -4,12 +4,11 @@ import com.ChattingSystem.chatroom.entity.RoomStatus;
 
 import java.time.Instant;
 
+// Không có tọa độ: tâm phòng là vị trí thật của người tạo
 public record RoomResponse(
         Long id,
         String title,
         String description,
-        double lat,
-        double lng,
         int radiusM,
         RoomStatus status,
         Instant createdAt,

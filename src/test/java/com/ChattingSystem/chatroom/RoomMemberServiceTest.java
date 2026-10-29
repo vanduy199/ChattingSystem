@@ -2,6 +2,7 @@
 package com.ChattingSystem.chatroom;
 
 import com.ChattingSystem.chatroom.dto.request.CreateRoomRequest;
+import com.ChattingSystem.chatroom.dto.request.LocationRequest;
 import com.ChattingSystem.chatroom.dto.response.MyRoomResponse;
 import com.ChattingSystem.chatroom.entity.ChatRoom;
 import com.ChattingSystem.chatroom.entity.RoomStatus;
@@ -95,7 +96,7 @@ class RoomMemberServiceTest {
 
     private Long createRoomAndJoin(Long ownerId, Long memberId) {
         Long roomId = createRoom(ownerId);
-        chatRoomService.joinRoom(memberId, roomId);
+        chatRoomService.joinRoom(memberId, roomId, new LocationRequest(21.0285, 105.8542));
         return roomId;
     }
 

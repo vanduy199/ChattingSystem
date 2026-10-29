@@ -1,7 +1,11 @@
 package com.ChattingSystem.chatroom.service.impl;
 
 import com.ChattingSystem.chatroom.dto.request.CreateRoomRequest;
+import com.ChattingSystem.chatroom.dto.request.LocationRequest;
 import com.ChattingSystem.chatroom.dto.response.JoinRoomResponse;
+import com.ChattingSystem.chatroom.dto.response.NearbyRoomResponse;
+import com.ChattingSystem.chatroom.dto.response.RoomDetailResponse;
+import com.ChattingSystem.chatroom.dto.response.RoomMemberResponse;
 import com.ChattingSystem.chatroom.dto.response.RoomResponse;
 import com.ChattingSystem.chatroom.entity.ChatRoom;
 import com.ChattingSystem.chatroom.entity.MemberRole;
@@ -10,28 +14,58 @@ import com.ChattingSystem.chatroom.entity.RoomStatus;
 import com.ChattingSystem.chatroom.repository.ChatRoomRepository;
 import com.ChattingSystem.chatroom.repository.RoomMemberRepository;
 import com.ChattingSystem.chatroom.service.ChatRoomService;
+import com.ChattingSystem.chatroom.service.RoomAccessService;
+import com.ChattingSystem.chatroom.util.DistanceLabel;
+import com.ChattingSystem.chatroom.util.LocationFuzzer;
+import com.ChattingSystem.realtime.event.MemberEventData;
+import com.ChattingSystem.realtime.event.RoomEvent;
+import com.ChattingSystem.realtime.event.RoomEventType;
 import com.ChattingSystem.shared.exeption.AppException;
 import com.ChattingSystem.shared.exeption.ErrorCode;
-import com.google.api.gax.rpc.ApiException;
-import lombok.RequiredArgsConstructor;
+import com.ChattingSystem.user.entity.User;
+import com.ChattingSystem.user.repository.UserRepository;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.security.SecureRandom;
 import java.time.Instant;
+import java.util.List;
 
 @Service
-@RequiredArgsConstructor
 public class ChatRoomServiceImpl implements ChatRoomService {
 
     private static final int DEFAULT_TTL_MIN = 60;
     private static final int DEFAULT_RADIUS_M = 3000;
+    private static final int MAX_ACTIVE_ROOMS_PER_USER = 3;
 
     private final ChatRoomRepository roomRepo;
     private final RoomMemberRepository memberRepo;
+    private final UserRepository userRepo;
+    private final RoomAccessService roomAccess;
+    private final ApplicationEventPublisher events;
+    private final SecureRandom random = new SecureRandom();
+
+    public ChatRoomServiceImpl(ChatRoomRepository roomRepo,
+                               RoomMemberRepository memberRepo,
+                               UserRepository userRepo,
+                               RoomAccessService roomAccess,
+                               ApplicationEventPublisher events) {
+        this.roomRepo = roomRepo;
+        this.memberRepo = memberRepo;
+        this.userRepo = userRepo;
+        this.roomAccess = roomAccess;
+        this.events = events;
+    }
 
     @Override
     @Transactional
     public RoomResponse createRoom(Long userId, CreateRoomRequest req) {
+        long active = roomRepo.countByCreatedByAndStatusAndExpiresAtAfter(userId, RoomStatus.ACTIVE, Instant.now());
+        if (active >= MAX_ACTIVE_ROOMS_PER_USER) {
+            throw new AppException(ErrorCode.ROOM_LIMIT_REACHED);
+        }
+
         int ttl = req.ttlMinutes() != null ? req.ttlMinutes() : DEFAULT_TTL_MIN;
         int radius = req.radiusM() != null ? req.radiusM() : DEFAULT_RADIUS_M;
 
@@ -39,32 +73,66 @@ public class ChatRoomServiceImpl implements ChatRoomService {
         ChatRoom room = roomRepo.saveAndFlush(
                 ChatRoom.create(req.title(), req.description(), userId, ttl, radius));
 
-        roomRepo.updateCenter(room.getId(), req.lat(), req.lng());
+        LocationFuzzer.Point display = LocationFuzzer.fuzz(req.lat(), req.lng(), random);
+        roomRepo.updateCenter(room.getId(), req.lat(), req.lng(), display.lat(), display.lng());
         memberRepo.save(RoomMember.create(room.getId(), userId, MemberRole.OWNER));
 
         return new RoomResponse(
-                room.getId(), room.getTitle(), room.getDescription(),
-                req.lat(), req.lng(), room.getRadiusM(),
+                room.getId(), room.getTitle(), room.getDescription(), room.getRadiusM(),
                 room.getStatus(), room.getCreatedAt(), room.getExpiresAt());
     }
 
     @Override
-    @Transactional
-    public JoinRoomResponse  joinRoom(Long userId, Long roomId) {
-        ChatRoom room = roomRepo.findById(roomId).orElseThrow(()->new AppException(ErrorCode.ROOM_NOT_FOUND));
-        Instant now = Instant.now();
-        Instant expiresAt = room.getExpiresAt();
-        if (room.getStatus() != RoomStatus.ACTIVE || !expiresAt.isAfter(now)) {
-            throw new AppException(ErrorCode.ROOM_EXPIRED);
-        }
-        if(memberRepo.existsByRoomIdAndUserId(roomId, userId)) {
-            throw new AppException(ErrorCode.ALREADY_JOINED_ROOM);
-        }
-        memberRepo.save(RoomMember.create(roomId, userId, MemberRole.MEMBER));
-        return new JoinRoomResponse(
-          roomId, userId, MemberRole.MEMBER,Instant.now()
-        );
+    @Transactional(readOnly = true)
+    public List<NearbyRoomResponse> findNearby(Long userId, double lat, double lng, int radiusM) {
+        return roomRepo.findNearby(lat, lng, radiusM, userId).stream()
+                .map(row -> new NearbyRoomResponse(
+                        row.getId(), row.getTitle(), row.getDescription(), row.getRadiusM(),
+                        row.getMemberCount(), DistanceLabel.of(row.getDistanceM()),
+                        row.getJoined(), row.getExpiresAt()))
+                .toList();
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public RoomDetailResponse getRoom(Long userId, Long roomId) {
+        ChatRoom room = roomRepo.findById(roomId)
+                .orElseThrow(() -> new AppException(ErrorCode.ROOM_NOT_FOUND));
+        RoomMember me = memberRepo.findByRoomIdAndUserId(roomId, userId)
+                .orElseThrow(() -> new AppException(ErrorCode.NOT_ROOM_MEMBER));
+        return new RoomDetailResponse(
+                room.getId(), room.getTitle(), room.getDescription(), room.getRadiusM(),
+                room.getStatus(), room.getCreatedBy(), memberRepo.countByRoomId(roomId),
+                me.getRole(), room.getCreatedAt(), room.getExpiresAt());
+    }
 
+    @Override
+    @Transactional
+    public JoinRoomResponse joinRoom(Long userId, Long roomId, LocationRequest location) {
+        roomAccess.requireActiveRoom(roomId);
+        if (memberRepo.existsByRoomIdAndUserId(roomId, userId)) {
+            throw new AppException(ErrorCode.ALREADY_JOINED_ROOM);
+        }
+        // So với tâm đã làm mờ, khớp với những gì /rooms/nearby cho người dùng thấy
+        if (!roomRepo.isWithinRoomRadius(roomId, location.lat(), location.lng())) {
+            throw new AppException(ErrorCode.OUT_OF_RANGE);
+        }
+
+        RoomMember member = memberRepo.save(RoomMember.create(roomId, userId, MemberRole.MEMBER));
+
+        String fullName = userRepo.findById(userId).map(User::getFullName).orElse(null);
+        events.publishEvent(new RoomEvent(roomId, RoomEventType.MEMBER_JOINED,
+                new MemberEventData(roomId, userId, fullName)));
+
+        return new JoinRoomResponse(roomId, userId, member.getRole(), member.getJoinedAt());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<RoomMemberResponse> getMembers(Long userId, Long roomId) {
+        if (!memberRepo.existsByRoomIdAndUserId(roomId, userId)) {
+            throw new AppException(ErrorCode.NOT_ROOM_MEMBER);
+        }
+        return memberRepo.findMembers(roomId);
+    }
 }

@@ -8,9 +8,14 @@ import com.ChattingSystem.chatroom.entity.RoomStatus;
 import com.ChattingSystem.chatroom.repository.ChatRoomRepository;
 import com.ChattingSystem.chatroom.repository.RoomMemberRepository;
 import com.ChattingSystem.chatroom.service.RoomMemberService;
+import com.ChattingSystem.realtime.event.MemberEventData;
+import com.ChattingSystem.realtime.event.RoomEvent;
+import com.ChattingSystem.realtime.event.RoomEventType;
 import com.ChattingSystem.shared.exeption.AppException;
 import com.ChattingSystem.shared.exeption.ErrorCode;
-import lombok.RequiredArgsConstructor;
+import com.ChattingSystem.user.entity.User;
+import com.ChattingSystem.user.repository.UserRepository;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -19,10 +24,22 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 
 @Service
-@RequiredArgsConstructor
 public class RoomMemberServiceImpl implements RoomMemberService {
     private final RoomMemberRepository roomMemberRepository;
     private final ChatRoomRepository chatRoomRepository;
+    private final UserRepository userRepository;
+    private final ApplicationEventPublisher events;
+
+    public RoomMemberServiceImpl(RoomMemberRepository roomMemberRepository,
+                                 ChatRoomRepository chatRoomRepository,
+                                 UserRepository userRepository,
+                                 ApplicationEventPublisher events) {
+        this.roomMemberRepository = roomMemberRepository;
+        this.chatRoomRepository = chatRoomRepository;
+        this.userRepository = userRepository;
+        this.events = events;
+    }
+
     @Override
     public Page<MyRoomResponse> getMyActiveRooms(Long userId, Pageable pageable){
         return roomMemberRepository.findActiveRoomsByUserId(
@@ -62,5 +79,9 @@ public class RoomMemberServiceImpl implements RoomMemberService {
         }
 
         roomMemberRepository.delete(member);
+
+        String fullName = userRepository.findById(userId).map(User::getFullName).orElse(null);
+        events.publishEvent(new RoomEvent(roomId, RoomEventType.MEMBER_LEFT,
+                new MemberEventData(roomId, userId, fullName)));
     }
 }

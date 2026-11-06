@@ -33,6 +33,7 @@ public class SecurityConfig {
                         .requestMatchers("/error").permitAll()
                         // Handshake WebSocket: JWT được kiểm tra ở frame STOMP CONNECT (StompAuthChannelInterceptor)
                         .requestMatchers("/ws", "/ws/**").permitAll()
+                        .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
                         .requestMatchers("/admin/**").hasAuthority("SCOPE_ADMIN")
                         .anyRequest().authenticated()
                 )

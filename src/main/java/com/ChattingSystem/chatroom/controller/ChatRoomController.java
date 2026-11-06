@@ -2,6 +2,7 @@ package com.ChattingSystem.chatroom.controller;
 
 import com.ChattingSystem.chatroom.dto.request.CreateRoomRequest;
 import com.ChattingSystem.chatroom.dto.request.LocationRequest;
+import com.ChattingSystem.chatroom.dto.request.UpdateRoomRequest;
 import com.ChattingSystem.chatroom.dto.response.JoinRoomResponse;
 import com.ChattingSystem.chatroom.dto.response.MyRoomResponse;
 import com.ChattingSystem.chatroom.dto.response.NearbyRoomResponse;
@@ -28,106 +29,114 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.PathVariable;
 
 @RestController
-@RequestMapping("/rooms")   // URL thật: POST /api/v1/rooms (context-path = /api/v1)
+@RequestMapping("/rooms") // URL thật: POST /api/v1/rooms (context-path = /api/v1)
 public class ChatRoomController {
 
-    private final ChatRoomService service;
-    private final RoomMemberService roomMemberService;
+        private final ChatRoomService service;
+        private final RoomMemberService roomMemberService;
 
-    public ChatRoomController(ChatRoomService service, RoomMemberService roomMemberService) {
-        this.service = service;
-        this.roomMemberService = roomMemberService;
-    }
+        public ChatRoomController(ChatRoomService service, RoomMemberService roomMemberService) {
+                this.service = service;
+                this.roomMemberService = roomMemberService;
+        }
 
-    // claim "userId" do JwtService.generateAccessToken đặt vào token
-    private static Long userIdOf(Jwt jwt) {
-        return ((Number) jwt.getClaim("userId")).longValue();
-    }
+        // claim "userId" do JwtService.generateAccessToken đặt vào token
+        private static Long userIdOf(Jwt jwt) {
+                return ((Number) jwt.getClaim("userId")).longValue();
+        }
 
-    @PostMapping
-    public ResponseEntity<ApiResponse<RoomResponse>> create(
-            @AuthenticationPrincipal Jwt jwt,
-            @Valid @RequestBody CreateRoomRequest req) {
+        @PostMapping
+        public ResponseEntity<ApiResponse<RoomResponse>> create(
+                        @AuthenticationPrincipal Jwt jwt,
+                        @Valid @RequestBody CreateRoomRequest req) {
 
-        RoomResponse room = service.createRoom(userIdOf(jwt), req);
+                RoomResponse room = service.createRoom(userIdOf(jwt), req);
 
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success("Tạo phòng thành công!", room));
-    }
+                return ResponseEntity.status(HttpStatus.CREATED)
+                                .body(ApiResponse.success("Tạo phòng thành công!", room));
+        }
 
-    @GetMapping("/nearby")
-    public ResponseEntity<ApiResponse<List<NearbyRoomResponse>>> nearby(
-            @AuthenticationPrincipal Jwt jwt,
-            @RequestParam @DecimalMin("-90") @DecimalMax("90") double lat,
-            @RequestParam @DecimalMin("-180") @DecimalMax("180") double lng,
-            @RequestParam(defaultValue = "1000") @Min(100) @Max(3000) int radius) {
+        @PutMapping
+        public ResponseEntity<ApiResponse<RoomResponse>> updateRoom(
+                        @AuthenticationPrincipal Jwt jwt,
+                        @Valid @RequestBody UpdateRoomRequest req) {
 
-        List<NearbyRoomResponse> rooms = service.findNearby(userIdOf(jwt), lat, lng, radius);
-        return ResponseEntity.ok(ApiResponse.success("Lấy danh sách phòng gần bạn thành công!", rooms));
-    }
+                RoomResponse entity = service.updateRoom(userIdOf(jwt), req);
+                return ResponseEntity.status(HttpStatus.OK)
+                                .body(ApiResponse.success("Cập nhật phòng thành công!", entity));
+        }
 
-    @GetMapping("/{roomId}")
-    public ResponseEntity<ApiResponse<RoomDetailResponse>> detail(
-            @PathVariable Long roomId,
-            @AuthenticationPrincipal Jwt jwt) {
+        @GetMapping("/nearby")
+        public ResponseEntity<ApiResponse<List<NearbyRoomResponse>>> nearby(
+                        @AuthenticationPrincipal Jwt jwt,
+                        @RequestParam @DecimalMin("-90") @DecimalMax("90") double lat,
+                        @RequestParam @DecimalMin("-180") @DecimalMax("180") double lng,
+                        @RequestParam(defaultValue = "1000") @Min(100) @Max(3000) int radius) {
 
-        RoomDetailResponse room = service.getRoom(userIdOf(jwt), roomId);
-        return ResponseEntity.ok(ApiResponse.success("Lấy thông tin phòng chat thành công!", room));
-    }
+                List<NearbyRoomResponse> rooms = service.findNearby(userIdOf(jwt), lat, lng, radius);
+                return ResponseEntity.ok(ApiResponse.success("Lấy danh sách phòng gần bạn thành công!", rooms));
+        }
 
-    @PostMapping("/{roomId}/members")
-    public ResponseEntity<ApiResponse<JoinRoomResponse>> joinRoom(
-            @PathVariable Long roomId,
-            @AuthenticationPrincipal Jwt jwt,
-            @Valid @RequestBody LocationRequest location) {
+        @GetMapping("/{roomId}")
+        public ResponseEntity<ApiResponse<RoomDetailResponse>> detail(
+                        @PathVariable Long roomId,
+                        @AuthenticationPrincipal Jwt jwt) {
 
-        JoinRoomResponse room = service.joinRoom(userIdOf(jwt), roomId, location);
-        return ResponseEntity.status(HttpStatus.OK)
-                .body(ApiResponse.success("Tham gia phòng chat thành công!", room));
-    }
+                RoomDetailResponse room = service.getRoom(userIdOf(jwt), roomId);
+                return ResponseEntity.ok(ApiResponse.success("Lấy thông tin phòng chat thành công!", room));
+        }
 
-    @GetMapping("/{roomId}/members")
-    public ResponseEntity<ApiResponse<List<RoomMemberResponse>>> members(
-            @PathVariable Long roomId,
-            @AuthenticationPrincipal Jwt jwt) {
+        @PostMapping("/{roomId}/members")
+        public ResponseEntity<ApiResponse<JoinRoomResponse>> joinRoom(
+                        @PathVariable Long roomId,
+                        @AuthenticationPrincipal Jwt jwt,
+                        @Valid @RequestBody LocationRequest location) {
 
-        List<RoomMemberResponse> members = service.getMembers(userIdOf(jwt), roomId);
-        return ResponseEntity.ok(ApiResponse.success("Lấy danh sách thành viên thành công!", members));
-    }
+                JoinRoomResponse room = service.joinRoom(userIdOf(jwt), roomId, location);
+                return ResponseEntity.status(HttpStatus.OK)
+                                .body(ApiResponse.success("Tham gia phòng chat thành công!", room));
+        }
 
-    @GetMapping("/me")
-    public ResponseEntity<ApiResponse<PageResponse<MyRoomResponse>>> listRooms(@AuthenticationPrincipal Jwt jwt,
-                                                                               @RequestParam(defaultValue = "0") int page,
-                                                                               @RequestParam(defaultValue = "20") int size){
-        Pageable pageable = PageRequest.of(
-                Math.max(page, 0),
-                Math.clamp(size, 1, 100)
-        );
+        @GetMapping("/{roomId}/members")
+        public ResponseEntity<ApiResponse<List<RoomMemberResponse>>> members(
+                        @PathVariable Long roomId,
+                        @AuthenticationPrincipal Jwt jwt) {
 
-        Page<MyRoomResponse> rooms =
-                roomMemberService.getMyActiveRooms(userIdOf(jwt), pageable);
+                List<RoomMemberResponse> members = service.getMembers(userIdOf(jwt), roomId);
+                return ResponseEntity.ok(ApiResponse.success("Lấy danh sách thành viên thành công!", members));
+        }
 
-        PageResponse<MyRoomResponse> response = PageResponse.of(rooms);
+        @GetMapping("/me")
+        public ResponseEntity<ApiResponse<PageResponse<MyRoomResponse>>> listRooms(@AuthenticationPrincipal Jwt jwt,
+                        @RequestParam(defaultValue = "0") int page,
+                        @RequestParam(defaultValue = "20") int size) {
+                Pageable pageable = PageRequest.of(
+                                Math.max(page, 0),
+                                Math.clamp(size, 1, 100));
 
-        return ResponseEntity.ok(
-                ApiResponse.success("Lấy danh sách phòng chat thành công!", response)
-        );
-    }
+                Page<MyRoomResponse> rooms = roomMemberService.getMyActiveRooms(userIdOf(jwt), pageable);
 
-    @DeleteMapping("/{roomId}/members/me")
-    public ResponseEntity<ApiResponse<Void>> leaveRoom(
-            @PathVariable Long roomId,
-            @AuthenticationPrincipal Jwt jwt) {
+                PageResponse<MyRoomResponse> response = PageResponse.of(rooms);
 
-        roomMemberService.leaveRoom(userIdOf(jwt), roomId);
+                return ResponseEntity.ok(
+                                ApiResponse.success("Lấy danh sách phòng chat thành công!", response));
+        }
 
-        return ResponseEntity.ok(
-                ApiResponse.success(
-                        "Rời khỏi phòng chat thành công!",
-                        null
-                )
-        );
-    }
+        @DeleteMapping("/{roomId}/members/me")
+        public ResponseEntity<ApiResponse<Void>> leaveRoom(
+                        @PathVariable Long roomId,
+                        @AuthenticationPrincipal Jwt jwt) {
+
+                roomMemberService.leaveRoom(userIdOf(jwt), roomId);
+
+                return ResponseEntity.ok(
+                                ApiResponse.success(
+                                                "Rời khỏi phòng chat thành công!",
+                                                null));
+        }
 }

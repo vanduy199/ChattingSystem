@@ -14,22 +14,23 @@ import java.util.List;
 @Repository
 public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
 
-    // Lưu ý thứ tự ST_MakePoint(lng, lat), không phải (lat, lng).
-    // Dùng CAST thay cho "::" để Spring không hiểu nhầm là tham số.
-    @Modifying
-    @Query(value = """
-            UPDATE chat_rooms
-            SET center = CAST(ST_SetSRID(ST_MakePoint(:lng, :lat), 4326) AS geography),
-                display_center = CAST(ST_SetSRID(ST_MakePoint(:displayLng, :displayLat), 4326) AS geography)
-            WHERE id = :id
-            """, nativeQuery = true)
-    void updateCenter(@Param("id") Long id,
-                      @Param("lat") double lat,
-                      @Param("lng") double lng,
-                      @Param("displayLat") double displayLat,
-                      @Param("displayLng") double displayLng);
+        // Lưu ý thứ tự ST_MakePoint(lng, lat), không phải (lat, lng).
+        // Dùng CAST thay cho "::" để Spring không hiểu nhầm là tham số.
+        @Modifying
+        @Query(value = """
+                        UPDATE chat_rooms
+                        SET center = CAST(ST_SetSRID(ST_MakePoint(:lng, :lat), 4326) AS geography),
+                            display_center = CAST(ST_SetSRID(ST_MakePoint(:displayLng, :displayLat), 4326) AS geography)
+                        WHERE id = :id
+                        """, nativeQuery = true)
+        void updateCenter(@Param("id") Long id,
+                        @Param("lat") double lat,
+                        @Param("lng") double lng,
+                        @Param("displayLat") double displayLat,
+                        @Param("displayLng") double displayLng);
 
-    long countByCreatedByAndStatusAndExpiresAtAfter(Long createdBy, RoomStatus status, Instant now);
+        long countByCreatedByAndStatusAndExpiresAtAfter(Long createdBy, RoomStatus status, Instant now);
+
 
     /**
      * Phòng đang hoạt động mà người dùng nhìn thấy: nằm trong bán kính quét của họ
@@ -53,37 +54,38 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
             ORDER BY "distanceM"
             LIMIT 50
             """, nativeQuery = true)
-    List<NearbyRoomRow> findNearby(@Param("lat") double lat,
-                                   @Param("lng") double lng,
-                                   @Param("radius") int radius,
-                                   @Param("userId") Long userId);
 
-    @Query(value = """
-            SELECT COALESCE(ST_DWithin(r.display_center,
-                                       CAST(ST_SetSRID(ST_MakePoint(:lng, :lat), 4326) AS geography),
-                                       r.radius_m), false)
-            FROM chat_rooms r
-            WHERE r.id = :id
-            """, nativeQuery = true)
-    boolean isWithinRoomRadius(@Param("id") Long id,
-                               @Param("lat") double lat,
-                               @Param("lng") double lng);
+        List<NearbyRoomRow> findNearby(@Param("lat") double lat,
+                        @Param("lng") double lng,
+                        @Param("radius") int radius,
+                        @Param("userId") Long userId);
 
-    interface NearbyRoomRow {
-        Long getId();
+        @Query(value = """
+                        SELECT COALESCE(ST_DWithin(r.display_center,
+                                                   CAST(ST_SetSRID(ST_MakePoint(:lng, :lat), 4326) AS geography),
+                                                   r.radius_m), false)
+                        FROM chat_rooms r
+                        WHERE r.id = :id
+                        """, nativeQuery = true)
+        boolean isWithinRoomRadius(@Param("id") Long id,
+                        @Param("lat") double lat,
+                        @Param("lng") double lng);
 
-        String getTitle();
+        interface NearbyRoomRow {
+                Long getId();
 
-        String getDescription();
+                String getTitle();
 
-        Integer getRadiusM();
+                String getDescription();
 
-        Instant getExpiresAt();
+                Integer getRadiusM();
 
-        Double getDistanceM();
+                Instant getExpiresAt();
 
-        Long getMemberCount();
+                Double getDistanceM();
 
-        Boolean getJoined();
-    }
+                Long getMemberCount();
+
+                Boolean getJoined();
+        }
 }

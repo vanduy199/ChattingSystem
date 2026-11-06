@@ -35,7 +35,8 @@ public enum ErrorCode {
     FILE_TOO_LARGE(HttpStatus.PAYLOAD_TOO_LARGE, "Tệp vượt quá dung lượng cho phép (5 MB)"),
     STORAGE_NOT_CONFIGURED(HttpStatus.SERVICE_UNAVAILABLE, "Chưa cấu hình dịch vụ lưu trữ"),
     STORAGE_ERROR(HttpStatus.BAD_GATEWAY, "Không thể tải tệp lên dịch vụ lưu trữ"),
-    INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "Lỗi hệ thống");
+    INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "Lỗi hệ thống"),
+    ROOM_NOT_FOUND_OR_NOT_OWNER(HttpStatus.NOT_FOUND, "Không tìm thấy phòng chat hoặc bạn không phải chủ phòng");
 
     private final HttpStatus httpStatus;
     private final String defaultMessage;

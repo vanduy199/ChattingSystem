@@ -1,6 +1,7 @@
 package com.ChattingSystem.chatroom.service.impl;
 
 import com.ChattingSystem.chatroom.dto.request.CreateRoomRequest;
+import com.ChattingSystem.chatroom.dto.request.UpdateRoomRequest;
 import com.ChattingSystem.chatroom.dto.request.LocationRequest;
 import com.ChattingSystem.chatroom.dto.response.JoinRoomResponse;
 import com.ChattingSystem.chatroom.dto.response.NearbyRoomResponse;
@@ -27,7 +28,7 @@ import com.ChattingSystem.user.repository.UserRepository;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import java.time.temporal.ChronoUnit;
 import java.security.SecureRandom;
 import java.time.Instant;
 import java.util.List;
@@ -47,10 +48,10 @@ public class ChatRoomServiceImpl implements ChatRoomService {
     private final SecureRandom random = new SecureRandom();
 
     public ChatRoomServiceImpl(ChatRoomRepository roomRepo,
-                               RoomMemberRepository memberRepo,
-                               UserRepository userRepo,
-                               RoomAccessService roomAccess,
-                               ApplicationEventPublisher events) {
+            RoomMemberRepository memberRepo,
+            UserRepository userRepo,
+            RoomAccessService roomAccess,
+            ApplicationEventPublisher events) {
         this.roomRepo = roomRepo;
         this.memberRepo = memberRepo;
         this.userRepo = userRepo;
@@ -76,6 +77,27 @@ public class ChatRoomServiceImpl implements ChatRoomService {
         LocationFuzzer.Point display = LocationFuzzer.fuzz(req.lat(), req.lng(), random);
         roomRepo.updateCenter(room.getId(), req.lat(), req.lng(), display.lat(), display.lng());
         memberRepo.save(RoomMember.create(room.getId(), userId, MemberRole.OWNER));
+
+        return new RoomResponse(
+                room.getId(), room.getTitle(), room.getDescription(), room.getRadiusM(),
+                room.getStatus(), room.getCreatedAt(), room.getExpiresAt());
+    }
+
+    @Override
+    @Transactional
+    public RoomResponse updateRoom(Long userId, UpdateRoomRequest req) {
+        ChatRoom room = roomRepo.findById(req.id())
+                .orElseThrow(() -> new AppException(ErrorCode.ROOM_NOT_FOUND));
+
+        if (!room.getCreatedBy().equals(userId)) {
+            throw new AppException(ErrorCode.ROOM_NOT_FOUND_OR_NOT_OWNER);
+        }
+
+        room.updateInfo(req.title(), req.description());
+
+        if (req.ttlMinutes() != null) {
+            room.extendExpiration(req.ttlMinutes());
+        }
 
         return new RoomResponse(
                 room.getId(), room.getTitle(), room.getDescription(), room.getRadiusM(),

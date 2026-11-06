@@ -42,6 +42,7 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
                    r.description       AS "description",
                    r.radius_m          AS "radiusM",
                    r.expires_at        AS "expiresAt",
+                   r.room_type         AS "roomType",
                    ST_Distance(r.display_center, me.point) AS "distanceM",
                    (SELECT COUNT(*) FROM room_members m WHERE m.room_id = r.id) AS "memberCount",
                    EXISTS (SELECT 1 FROM room_members m
@@ -87,5 +88,7 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
                 Long getMemberCount();
 
                 Boolean getJoined();
+
+                String getRoomType();
         }
 }

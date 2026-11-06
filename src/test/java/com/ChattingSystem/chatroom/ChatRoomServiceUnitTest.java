@@ -64,8 +64,25 @@ class ChatRoomServiceUnitTest {
     }
 
     @Test
+    void joinRoom_privateRoom_shouldThrowRoomPrivate() {
+        Long roomId = 5L;
+        com.ChattingSystem.chatroom.entity.ChatRoom mockRoom = org.mockito.Mockito.mock(com.ChattingSystem.chatroom.entity.ChatRoom.class);
+        when(mockRoom.getRoomType()).thenReturn("private");
+        when(roomAccess.requireActiveRoom(roomId)).thenReturn(mockRoom);
+
+        assertThatThrownBy(() -> service.joinRoom(1L, roomId, here))
+                .isInstanceOfSatisfying(AppException.class, ex ->
+                        assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.ROOM_PRIVATE));
+
+        verifyNoInteractions(memberRepo, events);
+    }
+
+    @Test
     void joinRoom_outOfRange_shouldThrowAndNotSaveMember() {
         Long roomId = 5L;
+        com.ChattingSystem.chatroom.entity.ChatRoom mockRoom = org.mockito.Mockito.mock(com.ChattingSystem.chatroom.entity.ChatRoom.class);
+        when(mockRoom.getRoomType()).thenReturn("public");
+        when(roomAccess.requireActiveRoom(roomId)).thenReturn(mockRoom);
         when(memberRepo.existsByRoomIdAndUserId(roomId, 1L)).thenReturn(false);
         when(roomRepo.isWithinRoomRadius(roomId, here.lat(), here.lng())).thenReturn(false);
 
@@ -80,6 +97,9 @@ class ChatRoomServiceUnitTest {
     @Test
     void joinRoom_alreadyMember_shouldThrowConflict() {
         Long roomId = 5L;
+        com.ChattingSystem.chatroom.entity.ChatRoom mockRoom = org.mockito.Mockito.mock(com.ChattingSystem.chatroom.entity.ChatRoom.class);
+        when(mockRoom.getRoomType()).thenReturn("public");
+        when(roomAccess.requireActiveRoom(roomId)).thenReturn(mockRoom);
         when(memberRepo.existsByRoomIdAndUserId(roomId, 1L)).thenReturn(true);
 
         assertThatThrownBy(() -> service.joinRoom(1L, roomId, here))

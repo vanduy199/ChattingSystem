@@ -51,7 +51,7 @@ class ChatRoomServiceTest {
     void createRoom_savesRoomCenterAndOwner() {
         User user = newUser();
         CreateRoomRequest req = new CreateRoomRequest(
-                "Ngap duong Nguyen Khuyen", "Nuoc ngap 30cm", 21.0285, 105.8542, 120, 2000);
+                "Ngap duong Nguyen Khuyen", "Nuoc ngap 30cm", 21.0285, 105.8542, 120, 2000, null);
 
         Instant before = Instant.now();
         RoomResponse res = service.createRoom(user.getId(), req);

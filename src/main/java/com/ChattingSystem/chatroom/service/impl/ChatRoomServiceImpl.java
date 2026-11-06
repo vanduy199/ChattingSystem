@@ -72,7 +72,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
 
         // flush để row tồn tại trước khi UPDATE center
         ChatRoom room = roomRepo.saveAndFlush(
-                ChatRoom.create(req.title(), req.description(), userId, ttl, radius));
+                ChatRoom.create(req.title(), req.description(), userId, ttl, radius, req.roomType()));
 
         LocationFuzzer.Point display = LocationFuzzer.fuzz(req.lat(), req.lng(), random);
         roomRepo.updateCenter(room.getId(), req.lat(), req.lng(), display.lat(), display.lng());
@@ -93,7 +93,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
             throw new AppException(ErrorCode.ROOM_NOT_FOUND_OR_NOT_OWNER);
         }
 
-        room.updateInfo(req.title(), req.description());
+        room.updateInfo(req.title(), req.description(), req.roomType());
 
         if (req.ttlMinutes() != null) {
             room.extendExpiration(req.ttlMinutes());
@@ -111,7 +111,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
                 .map(row -> new NearbyRoomResponse(
                         row.getId(), row.getTitle(), row.getDescription(), row.getRadiusM(),
                         row.getMemberCount(), DistanceLabel.of(row.getDistanceM()),
-                        row.getJoined(), row.getExpiresAt()))
+                        row.getJoined(), row.getExpiresAt(), row.getRoomType()))
                 .toList();
     }
 
@@ -125,13 +125,16 @@ public class ChatRoomServiceImpl implements ChatRoomService {
         return new RoomDetailResponse(
                 room.getId(), room.getTitle(), room.getDescription(), room.getRadiusM(),
                 room.getStatus(), room.getCreatedBy(), memberRepo.countByRoomId(roomId),
-                me.getRole(), room.getCreatedAt(), room.getExpiresAt());
+                me.getRole(), room.getCreatedAt(), room.getExpiresAt(), room.getRoomType());
     }
 
     @Override
     @Transactional
     public JoinRoomResponse joinRoom(Long userId, Long roomId, LocationRequest location) {
-        roomAccess.requireActiveRoom(roomId);
+        ChatRoom room = roomAccess.requireActiveRoom(roomId);
+        if (room != null && "private".equalsIgnoreCase(room.getRoomType())) {
+            throw new AppException(ErrorCode.ROOM_PRIVATE);
+        }
         if (memberRepo.existsByRoomIdAndUserId(roomId, userId)) {
             throw new AppException(ErrorCode.ALREADY_JOINED_ROOM);
         }

@@ -79,7 +79,8 @@ public class RoomMemberServiceUnitTest {
                 RoomStatus.ACTIVE,
                 now.plusSeconds(3600),
                 MemberRole.MEMBER,
-                now
+                now,
+                "Public"
         );
 
         Page<MyRoomResponse> expected = new PageImpl<>(

@@ -14,6 +14,7 @@ public record MyRoomResponse(
         RoomStatus status,
         Instant expiresAt,
         MemberRole role,
-        Instant joinedAt
+        Instant joinedAt,
+        String roomType
 ) {
 }

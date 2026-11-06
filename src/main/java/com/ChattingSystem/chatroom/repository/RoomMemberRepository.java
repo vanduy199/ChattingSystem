@@ -31,7 +31,8 @@ public interface RoomMemberRepository
                 cr.status,
                 cr.expiresAt,
                 rm.role,
-                rm.joinedAt
+                rm.joinedAt,
+                cr.roomType
             )
             FROM RoomMember rm
             JOIN ChatRoom cr ON cr.id = rm.roomId

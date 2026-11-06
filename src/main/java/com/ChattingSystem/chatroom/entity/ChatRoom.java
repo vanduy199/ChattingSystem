@@ -42,10 +42,13 @@ public class ChatRoom extends BaseEntity {
     @Column(name = "expires_at", nullable = false)
     private Instant expiresAt;
 
+    @Column(name = "room_type", nullable = false)
+    private String roomType; // "public" | "private" | "protected"
+
     // KHÔNG map cột "center" (geography). Ghi/đọc bằng native query trong repository.
 
     private ChatRoom(String title, String description, Long createdBy,
-                     int ttlMinutes, int radiusM) {
+                     int ttlMinutes, int radiusM, String roomType) {
         this.title = Objects.requireNonNull(title);
         this.description = description;
         this.createdBy = Objects.requireNonNull(createdBy);
@@ -53,19 +56,23 @@ public class ChatRoom extends BaseEntity {
         this.radiusM = radiusM;
         this.status = RoomStatus.ACTIVE;
         this.expiresAt = Instant.now().plus(ttlMinutes, ChronoUnit.MINUTES);
+        this.roomType = roomType ==  null ? "PUBLIC" : roomType; // default to public if null
     }
 
     public static ChatRoom create(String title, String description, Long createdBy,
-                                  int ttlMinutes, int radiusM) {
-        return new ChatRoom(title, description, createdBy, ttlMinutes, radiusM);
+                                  int ttlMinutes, int radiusM, String roomType) {
+        return new ChatRoom(title, description, createdBy, ttlMinutes, radiusM, roomType);
     }
 
-    public void updateInfo(String title, String description) {
+    public void updateInfo(String title, String description, String roomType) {
         if (title != null && !title.isBlank()) {
             this.title = title.trim();
         }
         if (description != null) {
             this.description = description.trim();
+        }
+        if (roomType != null && !roomType.isBlank()) {
+            this.roomType = roomType.trim();
         }
     }
 

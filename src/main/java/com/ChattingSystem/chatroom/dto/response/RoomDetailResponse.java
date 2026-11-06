@@ -15,5 +15,6 @@ public record RoomDetailResponse(
         long memberCount,
         MemberRole myRole,
         Instant createdAt,
-        Instant expiresAt
+        Instant expiresAt,
+        String roomType
 ) {}

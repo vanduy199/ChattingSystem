@@ -1,6 +1,7 @@
 package com.ChattingSystem.chatroom.dto.response;
 
 import java.time.Instant;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 public record NearbyRoomResponse(
         Long id,
@@ -10,5 +11,7 @@ public record NearbyRoomResponse(
         long memberCount,
         String distanceLabel,
         boolean joined,
-        Instant expiresAt
+        Instant expiresAt,
+        // Test JsonpProperty with jackson
+        @JsonProperty("roomType") String roomType
 ) {}

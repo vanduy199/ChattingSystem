@@ -53,7 +53,7 @@ jwt:
   refresh-expiration: ${JWT_REFRESH_EXPIRATION:30d}
 
 cors:
-  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173,https://chatchit.me,https://www.chatchit.me}
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173,https://chatchit.me,https://www.chatchit.me,http://192.168.50.199:3000}
 
 storage:
   endpoint: ${STORAGE_ENDPOINT:}

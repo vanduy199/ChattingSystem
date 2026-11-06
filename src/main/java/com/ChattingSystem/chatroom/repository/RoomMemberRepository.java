@@ -2,6 +2,7 @@
 package com.ChattingSystem.chatroom.repository;
 
 import com.ChattingSystem.chatroom.dto.response.MyRoomResponse;
+import com.ChattingSystem.chatroom.dto.response.RoomMemberResponse;
 import com.ChattingSystem.chatroom.entity.RoomMember;
 import com.ChattingSystem.chatroom.entity.RoomStatus;
 import org.springframework.data.domain.Page;
@@ -11,6 +12,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 
 public interface RoomMemberRepository
@@ -58,4 +60,17 @@ public interface RoomMemberRepository
             Long roomId,
             Long userId
     );
+
+    long countByRoomId(Long roomId);
+
+    @Query("""
+            SELECT new com.ChattingSystem.chatroom.dto.response.RoomMemberResponse(
+                u.id, u.fullName, u.avatarObject, rm.role, rm.joinedAt
+            )
+            FROM RoomMember rm
+            JOIN User u ON u.id = rm.userId
+            WHERE rm.roomId = :roomId
+            ORDER BY rm.joinedAt
+            """)
+    List<RoomMemberResponse> findMembers(@Param("roomId") Long roomId);
 }

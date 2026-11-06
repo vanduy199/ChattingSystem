@@ -59,4 +59,22 @@ public class ChatRoom extends BaseEntity {
                                   int ttlMinutes, int radiusM) {
         return new ChatRoom(title, description, createdBy, ttlMinutes, radiusM);
     }
+
+    public void updateInfo(String title, String description) {
+        if (title != null && !title.isBlank()) {
+            this.title = title.trim();
+        }
+        if (description != null) {
+            this.description = description.trim();
+        }
+    }
+
+    public void extendExpiration(int additionalMinutes) {
+        if (additionalMinutes > 0) {
+            Instant baseTime = this.expiresAt != null && this.expiresAt.isAfter(Instant.now())
+                    ? this.expiresAt
+                    : Instant.now();
+            this.expiresAt = baseTime.plus(additionalMinutes, ChronoUnit.MINUTES);
+        }
+    }
 }

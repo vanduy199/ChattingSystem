@@ -11,7 +11,11 @@ import com.ChattingSystem.chatroom.repository.RoomMemberRepository;
 
 import com.ChattingSystem.chatroom.service.impl.RoomMemberServiceImpl;
 import com.ChattingSystem.shared.exeption.AppException;
+import com.ChattingSystem.realtime.event.RoomEvent;
+import com.ChattingSystem.realtime.event.RoomEventType;
 import com.ChattingSystem.shared.exeption.ErrorCode;
+import com.ChattingSystem.user.repository.UserRepository;
+import org.springframework.context.ApplicationEventPublisher;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -39,6 +43,12 @@ public class RoomMemberServiceUnitTest {
 
     @Mock
     private ChatRoomRepository chatRoomRepository;
+
+    @Mock
+    private UserRepository userRepository;
+
+    @Mock
+    private ApplicationEventPublisher events;
 
     @InjectMocks
     private RoomMemberServiceImpl service;
@@ -149,6 +159,8 @@ public class RoomMemberServiceUnitTest {
         assertDoesNotThrow(() -> service.leaveRoom(userId, roomId));
 
         verify(roomMemberRepository).delete(member);
+        verify(events).publishEvent(argThat((Object e) ->
+                e instanceof RoomEvent re && re.type() == RoomEventType.MEMBER_LEFT && re.roomId().equals(roomId)));
     }
 
     @Test

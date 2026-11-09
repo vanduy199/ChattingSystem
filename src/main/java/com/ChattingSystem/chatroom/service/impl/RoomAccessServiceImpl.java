@@ -29,7 +29,7 @@ public class RoomAccessServiceImpl implements RoomAccessService {
     public ChatRoom requireActiveRoom(Long roomId) {
         ChatRoom room = roomRepo.findById(roomId)
                 .orElseThrow(() -> new AppException(ErrorCode.ROOM_NOT_FOUND));
-        if (room.getStatus() != RoomStatus.ACTIVE || !room.getExpiresAt().isAfter(Instant.now())) {
+        if (room.getStatus() != RoomStatus.ACTIVE || ( room.getExpiresAt() != null && !room.getExpiresAt().isAfter(Instant.now()))) {
             throw new AppException(ErrorCode.ROOM_EXPIRED);
         }
         return room;

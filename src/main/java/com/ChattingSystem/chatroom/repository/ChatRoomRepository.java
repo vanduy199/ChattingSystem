@@ -50,7 +50,7 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
             FROM chat_rooms r,
                  (SELECT CAST(ST_SetSRID(ST_MakePoint(:lng, :lat), 4326) AS geography) AS point) me
             WHERE r.status = 'ACTIVE'
-              AND r.expires_at > now()
+              AND (r.expires_at > now() OR r.expires_at IS NULL)
               AND ST_DWithin(r.display_center, me.point, LEAST(:radius, r.radius_m))
             ORDER BY "distanceM"
             LIMIT 50

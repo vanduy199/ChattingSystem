@@ -28,15 +28,12 @@ import com.ChattingSystem.user.repository.UserRepository;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import java.time.temporal.ChronoUnit;
 import java.security.SecureRandom;
 import java.time.Instant;
 import java.util.List;
 
 @Service
 public class ChatRoomServiceImpl implements ChatRoomService {
-
-    private static final int DEFAULT_TTL_MIN = 60;
     private static final int DEFAULT_RADIUS_M = 3000;
     private static final int MAX_ACTIVE_ROOMS_PER_USER = 3;
 
@@ -67,7 +64,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
             throw new AppException(ErrorCode.ROOM_LIMIT_REACHED);
         }
 
-        int ttl = req.ttlMinutes() != null ? req.ttlMinutes() : DEFAULT_TTL_MIN;
+        int ttl = req.ttlMinutes() != null ? req.ttlMinutes() : 0;
         int radius = req.radiusM() != null ? req.radiusM() : DEFAULT_RADIUS_M;
 
         // flush để row tồn tại trước khi UPDATE center

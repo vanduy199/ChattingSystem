@@ -29,7 +29,7 @@ public class ChatRoom extends BaseEntity {
     @Column(name = "created_by", nullable = false)
     private Long createdBy;
 
-    @Column(name = "default_live_time", nullable = false)
+    @Column(name = "default_live_time")
     private Integer defaultLiveTime;
 
     @Column(name = "radius_m", nullable = false)
@@ -39,7 +39,7 @@ public class ChatRoom extends BaseEntity {
     @Column(name = "status", nullable = false, length = 20)
     private RoomStatus status;
 
-    @Column(name = "expires_at", nullable = false)
+    @Column(name = "expires_at")
     private Instant expiresAt;
 
     @Column(name = "room_type", nullable = false)
@@ -59,8 +59,23 @@ public class ChatRoom extends BaseEntity {
         this.roomType = roomType ==  null ? "PUBLIC" : roomType; // default to public if null
     }
 
+    private ChatRoom(String title, String description, Long createdBy, int radiusM, String roomType) {
+        this.title = Objects.requireNonNull(title);
+        this.description = description;
+        this.createdBy = Objects.requireNonNull(createdBy);
+        this.defaultLiveTime = null;
+        this.radiusM = radiusM;
+        this.status = RoomStatus.ACTIVE;
+        this.expiresAt = null;
+        this.roomType = roomType ==  null ? "PUBLIC" : roomType; // default to public if null
+    }
+
+
     public static ChatRoom create(String title, String description, Long createdBy,
                                   int ttlMinutes, int radiusM, String roomType) {
+        if (ttlMinutes == 0) {
+            return new ChatRoom(title, description, createdBy, radiusM, roomType);
+        }
         return new ChatRoom(title, description, createdBy, ttlMinutes, radiusM, roomType);
     }
 

@@ -36,7 +36,11 @@ public enum ErrorCode {
     STORAGE_NOT_CONFIGURED(HttpStatus.SERVICE_UNAVAILABLE, "Chưa cấu hình dịch vụ lưu trữ"),
     STORAGE_ERROR(HttpStatus.BAD_GATEWAY, "Không thể tải tệp lên dịch vụ lưu trữ"),
     INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "Lỗi hệ thống"),
-    ROOM_NOT_FOUND_OR_NOT_OWNER(HttpStatus.NOT_FOUND, "Không tìm thấy phòng chat hoặc bạn không phải chủ phòng");
+    ROOM_NOT_FOUND_OR_NOT_OWNER(HttpStatus.NOT_FOUND, "Không tìm thấy phòng chat hoặc bạn không phải chủ phòng"),
+    ROOM_PRIVATE(HttpStatus.FORBIDDEN, "Phòng chat này là riêng tư, bạn không thể tham gia"),
+    NOT_ROOM_OWNER(HttpStatus.FORBIDDEN, "Bạn không phải chủ phòng chat này"),
+    INVALID_STATUS(HttpStatus.BAD_REQUEST, "Trạng thái không hợp lệ"),
+    ROOM_MEMBER_PENDING(HttpStatus.FORBIDDEN, "Bạn đã gửi yêu cầu tham gia phòng chat này, vui lòng chờ chủ phòng phê duyệt");
 
     private final HttpStatus httpStatus;
     private final String defaultMessage;

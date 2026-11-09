@@ -35,14 +35,23 @@ public class RoomMember extends BaseEntity {
     @Column(name = "joined_at", nullable = false)
     private Instant joinedAt;
 
-    private RoomMember(Long roomId, Long userId, MemberRole role) {
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false, length = 20)
+    private MemberStatus status = MemberStatus.ACTIVE;
+
+    public void setStatus(MemberStatus status) {
+        this.status = Objects.requireNonNull(status);
+    }
+
+    private RoomMember(Long roomId, Long userId, MemberRole role, MemberStatus status) {
         this.roomId = Objects.requireNonNull(roomId);
         this.userId = Objects.requireNonNull(userId);
         this.role = Objects.requireNonNull(role);
         this.joinedAt = Instant.now();
+        this.status = Objects.requireNonNull(status);
     }
 
-    public static RoomMember create(Long roomId, Long userId, MemberRole role) {
-        return new RoomMember(roomId, userId, role);
+    public static RoomMember create(Long roomId, Long userId, MemberRole role, MemberStatus status) {
+        return new RoomMember(roomId, userId, role, status);
     }
 }

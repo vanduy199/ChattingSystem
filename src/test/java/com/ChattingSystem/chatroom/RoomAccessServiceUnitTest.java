@@ -3,6 +3,7 @@ package com.ChattingSystem.chatroom;
 import com.ChattingSystem.chatroom.entity.ChatRoom;
 import com.ChattingSystem.chatroom.entity.RoomMember;
 import com.ChattingSystem.chatroom.entity.RoomStatus;
+import com.ChattingSystem.chatroom.entity.MemberStatus;
 import com.ChattingSystem.chatroom.repository.ChatRoomRepository;
 import com.ChattingSystem.chatroom.repository.RoomMemberRepository;
 import com.ChattingSystem.chatroom.service.impl.RoomAccessServiceImpl;
@@ -48,8 +49,8 @@ class RoomAccessServiceUnitTest {
         when(roomRepo.findById(1L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> roomAccess.requireActiveRoom(1L))
-                .isInstanceOfSatisfying(AppException.class, ex ->
-                        assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.ROOM_NOT_FOUND));
+                .isInstanceOfSatisfying(AppException.class,
+                        ex -> assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.ROOM_NOT_FOUND));
     }
 
     @Test
@@ -58,8 +59,8 @@ class RoomAccessServiceUnitTest {
         when(roomRepo.findById(1L)).thenReturn(Optional.of(expired));
 
         assertThatThrownBy(() -> roomAccess.requireActiveRoom(1L))
-                .isInstanceOfSatisfying(AppException.class, ex ->
-                        assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.ROOM_EXPIRED));
+                .isInstanceOfSatisfying(AppException.class,
+                        ex -> assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.ROOM_EXPIRED));
     }
 
     @Test
@@ -68,19 +69,19 @@ class RoomAccessServiceUnitTest {
         when(roomRepo.findById(1L)).thenReturn(Optional.of(closed));
 
         assertThatThrownBy(() -> roomAccess.requireActiveRoom(1L))
-                .isInstanceOfSatisfying(AppException.class, ex ->
-                        assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.ROOM_EXPIRED));
+                .isInstanceOfSatisfying(AppException.class,
+                        ex -> assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.ROOM_EXPIRED));
     }
 
     @Test
     void requireActiveMember_notMember() {
         ChatRoom active = room(RoomStatus.ACTIVE, Instant.now().plusSeconds(600));
         when(roomRepo.findById(1L)).thenReturn(Optional.of(active));
-        when(memberRepo.findByRoomIdAndUserId(1L, 7L)).thenReturn(Optional.empty());
+        when(memberRepo.findByRoomIdAndUserIdAndStatus(1L, 7L, MemberStatus.ACTIVE)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> roomAccess.requireActiveMember(7L, 1L))
-                .isInstanceOfSatisfying(AppException.class, ex ->
-                        assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.NOT_ROOM_MEMBER));
+                .isInstanceOfSatisfying(AppException.class,
+                        ex -> assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.NOT_ROOM_MEMBER));
     }
 
     @Test
@@ -88,7 +89,7 @@ class RoomAccessServiceUnitTest {
         ChatRoom active = room(RoomStatus.ACTIVE, Instant.now().plusSeconds(600));
         RoomMember member = mock(RoomMember.class);
         when(roomRepo.findById(1L)).thenReturn(Optional.of(active));
-        when(memberRepo.findByRoomIdAndUserId(1L, 7L)).thenReturn(Optional.of(member));
+        when(memberRepo.findByRoomIdAndUserIdAndStatus(1L, 7L, MemberStatus.ACTIVE)).thenReturn(Optional.of(member));
 
         assertThat(roomAccess.requireActiveMember(7L, 1L)).isSameAs(member);
     }

@@ -17,6 +17,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 
+import java.time.Instant;
+import java.util.Optional;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -64,9 +67,30 @@ class ChatRoomServiceUnitTest {
     }
 
     @Test
+    void joinRoom_privateRoom_shouldSavePendingMember() {
+        Long roomId = 5L;
+        com.ChattingSystem.chatroom.entity.ChatRoom mockRoom = org.mockito.Mockito.mock(com.ChattingSystem.chatroom.entity.ChatRoom.class);
+        when(mockRoom.getRoomType()).thenReturn("private");
+        when(roomAccess.requireActiveRoom(roomId)).thenReturn(mockRoom);
+        when(memberRepo.findByRoomIdAndUserId(roomId, 1L)).thenReturn(Optional.empty());
+        when(roomRepo.isWithinRoomRadius(roomId, here.lat(), here.lng())).thenReturn(true);
+        com.ChattingSystem.chatroom.entity.RoomMember saved = org.mockito.Mockito.mock(com.ChattingSystem.chatroom.entity.RoomMember.class);
+        when(saved.getRole()).thenReturn(com.ChattingSystem.chatroom.entity.MemberRole.MEMBER);
+        when(saved.getJoinedAt()).thenReturn(Instant.now());
+        when(memberRepo.save(any())).thenReturn(saved);
+        when(userRepo.findById(1L)).thenReturn(Optional.empty());
+
+        com.ChattingSystem.chatroom.dto.response.JoinRoomResponse res = service.joinRoom(1L, roomId, here);
+        assertThat(res.roomId()).isEqualTo(roomId);
+        verify(memberRepo).save(any());
+    }
+
+    @Test
     void joinRoom_outOfRange_shouldThrowAndNotSaveMember() {
         Long roomId = 5L;
-        when(memberRepo.existsByRoomIdAndUserId(roomId, 1L)).thenReturn(false);
+        com.ChattingSystem.chatroom.entity.ChatRoom mockRoom = org.mockito.Mockito.mock(com.ChattingSystem.chatroom.entity.ChatRoom.class);
+        when(roomAccess.requireActiveRoom(roomId)).thenReturn(mockRoom);
+        when(memberRepo.findByRoomIdAndUserId(roomId, 1L)).thenReturn(Optional.empty());
         when(roomRepo.isWithinRoomRadius(roomId, here.lat(), here.lng())).thenReturn(false);
 
         assertThatThrownBy(() -> service.joinRoom(1L, roomId, here))
@@ -78,13 +102,33 @@ class ChatRoomServiceUnitTest {
     }
 
     @Test
-    void joinRoom_alreadyMember_shouldThrowConflict() {
+    void joinRoom_alreadyMember_pending_shouldThrowPending() {
         Long roomId = 5L;
-        when(memberRepo.existsByRoomIdAndUserId(roomId, 1L)).thenReturn(true);
+        com.ChattingSystem.chatroom.entity.ChatRoom mockRoom = org.mockito.Mockito.mock(com.ChattingSystem.chatroom.entity.ChatRoom.class);
+        when(roomAccess.requireActiveRoom(roomId)).thenReturn(mockRoom);
+        com.ChattingSystem.chatroom.entity.RoomMember member = org.mockito.Mockito.mock(com.ChattingSystem.chatroom.entity.RoomMember.class);
+        when(member.getStatus()).thenReturn(com.ChattingSystem.chatroom.entity.MemberStatus.PENDING);
+        when(memberRepo.findByRoomIdAndUserId(roomId, 1L)).thenReturn(Optional.of(member));
 
         assertThatThrownBy(() -> service.joinRoom(1L, roomId, here))
                 .isInstanceOfSatisfying(AppException.class, ex ->
-                        assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.ALREADY_JOINED_ROOM));
+                        assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.ROOM_MEMBER_PENDING));
+    }
+
+    @Test
+    void joinRoom_alreadyMember_active_shouldReturnResponse() {
+        Long roomId = 5L;
+        com.ChattingSystem.chatroom.entity.ChatRoom mockRoom = org.mockito.Mockito.mock(com.ChattingSystem.chatroom.entity.ChatRoom.class);
+        when(roomAccess.requireActiveRoom(roomId)).thenReturn(mockRoom);
+        com.ChattingSystem.chatroom.entity.RoomMember member = org.mockito.Mockito.mock(com.ChattingSystem.chatroom.entity.RoomMember.class);
+        when(member.getStatus()).thenReturn(com.ChattingSystem.chatroom.entity.MemberStatus.ACTIVE);
+        when(member.getRole()).thenReturn(com.ChattingSystem.chatroom.entity.MemberRole.MEMBER);
+        when(member.getJoinedAt()).thenReturn(Instant.now());
+        when(memberRepo.findByRoomIdAndUserId(roomId, 1L)).thenReturn(Optional.of(member));
+
+        com.ChattingSystem.chatroom.dto.response.JoinRoomResponse res = service.joinRoom(1L, roomId, here);
+        assertThat(res.roomId()).isEqualTo(roomId);
+        assertThat(res.userId()).isEqualTo(1L);
     }
 
     @Test

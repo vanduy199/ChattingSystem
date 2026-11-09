@@ -3,6 +3,7 @@ package com.ChattingSystem.chatroom.service.impl;
 import com.ChattingSystem.chatroom.entity.ChatRoom;
 import com.ChattingSystem.chatroom.entity.RoomMember;
 import com.ChattingSystem.chatroom.entity.RoomStatus;
+import com.ChattingSystem.chatroom.entity.MemberStatus;
 import com.ChattingSystem.chatroom.repository.ChatRoomRepository;
 import com.ChattingSystem.chatroom.repository.RoomMemberRepository;
 import com.ChattingSystem.chatroom.service.RoomAccessService;
@@ -29,7 +30,8 @@ public class RoomAccessServiceImpl implements RoomAccessService {
     public ChatRoom requireActiveRoom(Long roomId) {
         ChatRoom room = roomRepo.findById(roomId)
                 .orElseThrow(() -> new AppException(ErrorCode.ROOM_NOT_FOUND));
-        if (room.getStatus() != RoomStatus.ACTIVE || ( room.getExpiresAt() != null && !room.getExpiresAt().isAfter(Instant.now()))) {
+        if (room.getStatus() != RoomStatus.ACTIVE
+                || (room.getExpiresAt() != null && !room.getExpiresAt().isAfter(Instant.now()))) {
             throw new AppException(ErrorCode.ROOM_EXPIRED);
         }
         return room;
@@ -39,7 +41,7 @@ public class RoomAccessServiceImpl implements RoomAccessService {
     @Transactional(readOnly = true)
     public RoomMember requireActiveMember(Long userId, Long roomId) {
         requireActiveRoom(roomId);
-        return memberRepo.findByRoomIdAndUserId(roomId, userId)
+        return memberRepo.findByRoomIdAndUserIdAndStatus(roomId, userId, MemberStatus.ACTIVE)
                 .orElseThrow(() -> new AppException(ErrorCode.NOT_ROOM_MEMBER));
     }
 }

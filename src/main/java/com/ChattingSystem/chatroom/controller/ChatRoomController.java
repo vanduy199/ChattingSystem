@@ -1,5 +1,6 @@
 package com.ChattingSystem.chatroom.controller;
 
+import com.ChattingSystem.chatroom.dto.request.AcceptJoinRequest;
 import com.ChattingSystem.chatroom.dto.request.CreateRoomRequest;
 import com.ChattingSystem.chatroom.dto.request.LocationRequest;
 import com.ChattingSystem.chatroom.dto.request.UpdateRoomRequest;
@@ -29,9 +30,6 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.PathVariable;
 
 @RestController
 @RequestMapping("/rooms") // URL thật: POST /api/v1/rooms (context-path = /api/v1)
@@ -137,6 +135,19 @@ public class ChatRoomController {
                 return ResponseEntity.ok(
                                 ApiResponse.success(
                                                 "Rời khỏi phòng chat thành công!",
+                                                null));
+        }
+
+        @PostMapping("/members/response-join")
+        public ResponseEntity<ApiResponse<Void>> acceptJoinRequest(
+                        @AuthenticationPrincipal Jwt jwt,
+                        @Valid @RequestBody AcceptJoinRequest ac) {
+
+                roomMemberService.acceptJoinRequest(userIdOf(jwt), ac.getRoomId(), ac.getUserId(), ac.getStatus());
+
+                return ResponseEntity.ok(
+                                ApiResponse.success(
+                                                "Chấp nhận yêu cầu tham gia phòng chat thành công!",
                                                 null));
         }
 }

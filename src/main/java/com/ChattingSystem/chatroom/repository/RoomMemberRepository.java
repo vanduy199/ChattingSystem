@@ -5,12 +5,14 @@ import com.ChattingSystem.chatroom.dto.response.MyRoomResponse;
 import com.ChattingSystem.chatroom.dto.response.RoomMemberResponse;
 import com.ChattingSystem.chatroom.entity.RoomMember;
 import com.ChattingSystem.chatroom.entity.RoomStatus;
+import com.ChattingSystem.chatroom.entity.MemberStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.lang.reflect.Member;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -20,6 +22,10 @@ public interface RoomMemberRepository
 
     boolean existsByRoomIdAndUserId(Long roomId, Long userId);
 
+    boolean existsByRoomIdAndUserIdAndStatus(Long roomId, Long userId, MemberStatus status);
+
+    Optional<RoomMember> findByRoomIdAndUserId(Long roomId, Long userId);
+    
     @Query(
             value = """
             SELECT new com.ChattingSystem.chatroom.dto.response.MyRoomResponse(
@@ -36,17 +42,17 @@ public interface RoomMemberRepository
             )
             FROM RoomMember rm
             JOIN ChatRoom cr ON cr.id = rm.roomId
-            WHERE rm.userId = :userId
+            WHERE rm.userId = :userId AND rm.status = 'ACTIVE'
               AND cr.status = :status
-              AND cr.expiresAt > :now
+              AND (cr.expiresAt > :now OR cr.expiresAt IS NULL)
             """,
             countQuery = """
             SELECT COUNT(rm.id)
             FROM RoomMember rm
             JOIN ChatRoom cr ON cr.id = rm.roomId
-            WHERE rm.userId = :userId
+            WHERE rm.userId = :userId AND rm.status = 'ACTIVE'
               AND cr.status = :status
-              AND cr.expiresAt > :now
+              AND (cr.expiresAt > :now OR cr.expiresAt IS NULL)
             """
     )
     Page<MyRoomResponse> findActiveRoomsByUserId(
@@ -57,16 +63,17 @@ public interface RoomMemberRepository
     );
 
 
-    Optional<RoomMember> findByRoomIdAndUserId(
+    Optional<RoomMember> findByRoomIdAndUserIdAndStatus(
             Long roomId,
-            Long userId
+            Long userId,
+            MemberStatus status
     );
 
     long countByRoomId(Long roomId);
 
     @Query("""
             SELECT new com.ChattingSystem.chatroom.dto.response.RoomMemberResponse(
-                u.id, u.fullName, u.avatarObject, rm.role, rm.joinedAt
+                u.id, u.fullName, u.avatarObject, rm.role, rm.status, rm.joinedAt
             )
             FROM RoomMember rm
             JOIN User u ON u.id = rm.userId

@@ -10,6 +10,7 @@ import com.ChattingSystem.chatroom.dto.response.RoomMemberResponse;
 import com.ChattingSystem.chatroom.dto.response.RoomResponse;
 import com.ChattingSystem.chatroom.entity.ChatRoom;
 import com.ChattingSystem.chatroom.entity.MemberRole;
+import com.ChattingSystem.chatroom.entity.MemberStatus;
 import com.ChattingSystem.chatroom.entity.RoomMember;
 import com.ChattingSystem.chatroom.entity.RoomStatus;
 import com.ChattingSystem.chatroom.repository.ChatRoomRepository;
@@ -31,6 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.security.SecureRandom;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class ChatRoomServiceImpl implements ChatRoomService {
@@ -73,7 +75,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
 
         LocationFuzzer.Point display = LocationFuzzer.fuzz(req.lat(), req.lng(), random);
         roomRepo.updateCenter(room.getId(), req.lat(), req.lng(), display.lat(), display.lng());
-        memberRepo.save(RoomMember.create(room.getId(), userId, MemberRole.OWNER));
+        memberRepo.save(RoomMember.create(room.getId(), userId, MemberRole.OWNER, MemberStatus.ACTIVE));
 
         return new RoomResponse(
                 room.getId(), room.getTitle(), room.getDescription(), room.getRadiusM(),
@@ -117,7 +119,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
     public RoomDetailResponse getRoom(Long userId, Long roomId) {
         ChatRoom room = roomRepo.findById(roomId)
                 .orElseThrow(() -> new AppException(ErrorCode.ROOM_NOT_FOUND));
-        RoomMember me = memberRepo.findByRoomIdAndUserId(roomId, userId)
+        RoomMember me = memberRepo.findByRoomIdAndUserIdAndStatus(roomId, userId, MemberStatus.ACTIVE)
                 .orElseThrow(() -> new AppException(ErrorCode.NOT_ROOM_MEMBER));
         return new RoomDetailResponse(
                 room.getId(), room.getTitle(), room.getDescription(), room.getRadiusM(),
@@ -128,20 +130,28 @@ public class ChatRoomServiceImpl implements ChatRoomService {
     @Override
     @Transactional
     public JoinRoomResponse joinRoom(Long userId, Long roomId, LocationRequest location) {
+        RoomMember member;
         ChatRoom room = roomAccess.requireActiveRoom(roomId);
-        if (room != null && "private".equalsIgnoreCase(room.getRoomType())) {
-            throw new AppException(ErrorCode.ROOM_PRIVATE);
-        }
-        if (memberRepo.existsByRoomIdAndUserId(roomId, userId)) {
-            throw new AppException(ErrorCode.ALREADY_JOINED_ROOM);
+
+        Optional<RoomMember> existingOpt = memberRepo.findByRoomIdAndUserId(roomId, userId);
+        if (existingOpt.isPresent()) {
+            member = existingOpt.get();
+            if (member.getStatus() == MemberStatus.ACTIVE) {
+                return new JoinRoomResponse(roomId, userId, member.getRole(), member.getJoinedAt());
+            } else if (member.getStatus() == MemberStatus.PENDING) {
+                throw new AppException(ErrorCode.ROOM_MEMBER_PENDING);
+            }
         }
         // So với tâm đã làm mờ, khớp với những gì /rooms/nearby cho người dùng thấy
         if (!roomRepo.isWithinRoomRadius(roomId, location.lat(), location.lng())) {
             throw new AppException(ErrorCode.OUT_OF_RANGE);
         }
 
-        RoomMember member = memberRepo.save(RoomMember.create(roomId, userId, MemberRole.MEMBER));
-
+        if (room != null && "private".equalsIgnoreCase(room.getRoomType())) {
+            member = memberRepo.save(RoomMember.create(roomId, userId, MemberRole.MEMBER, MemberStatus.PENDING));
+        } else {
+            member = memberRepo.save(RoomMember.create(roomId, userId, MemberRole.MEMBER, MemberStatus.ACTIVE));
+        }
         String fullName = userRepo.findById(userId).map(User::getFullName).orElse(null);
         events.publishEvent(new RoomEvent(roomId, RoomEventType.MEMBER_JOINED,
                 new MemberEventData(roomId, userId, fullName)));
@@ -152,7 +162,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
     @Override
     @Transactional(readOnly = true)
     public List<RoomMemberResponse> getMembers(Long userId, Long roomId) {
-        if (!memberRepo.existsByRoomIdAndUserId(roomId, userId)) {
+        if (!memberRepo.existsByRoomIdAndUserIdAndStatus(roomId, userId, MemberStatus.ACTIVE)) {
             throw new AppException(ErrorCode.NOT_ROOM_MEMBER);
         }
         return memberRepo.findMembers(roomId);

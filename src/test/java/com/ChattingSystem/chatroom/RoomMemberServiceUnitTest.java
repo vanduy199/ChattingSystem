@@ -6,6 +6,7 @@ import com.ChattingSystem.chatroom.entity.ChatRoom;
 import com.ChattingSystem.chatroom.entity.MemberRole;
 import com.ChattingSystem.chatroom.entity.RoomMember;
 import com.ChattingSystem.chatroom.entity.RoomStatus;
+import com.ChattingSystem.chatroom.entity.MemberStatus;
 import com.ChattingSystem.chatroom.repository.ChatRoomRepository;
 import com.ChattingSystem.chatroom.repository.RoomMemberRepository;
 
@@ -152,7 +153,7 @@ public class RoomMemberServiceUnitTest {
         when(activeRoom.getExpiresAt())
                 .thenReturn(Instant.now().plusSeconds(3600));
 
-        when(roomMemberRepository.findByRoomIdAndUserId(roomId, userId))
+        when(roomMemberRepository.findByRoomIdAndUserIdAndStatus(roomId, userId, MemberStatus.ACTIVE))
                 .thenReturn(Optional.of(member));
         when(member.getRole())
                 .thenReturn(MemberRole.MEMBER);
@@ -236,7 +237,7 @@ public class RoomMemberServiceUnitTest {
         when(activeRoom.getExpiresAt())
                 .thenReturn(Instant.now().plusSeconds(3600));
 
-        when(roomMemberRepository.findByRoomIdAndUserId(roomId, userId))
+        when(roomMemberRepository.findByRoomIdAndUserIdAndStatus(roomId, userId, MemberStatus.ACTIVE))
                 .thenReturn(Optional.empty());
 
         AppException exception = assertThrows(
@@ -264,7 +265,7 @@ public class RoomMemberServiceUnitTest {
         when(activeRoom.getExpiresAt())
                 .thenReturn(Instant.now().plusSeconds(3600));
 
-        when(roomMemberRepository.findByRoomIdAndUserId(roomId, userId))
+        when(roomMemberRepository.findByRoomIdAndUserIdAndStatus(roomId, userId, MemberStatus.ACTIVE))
                 .thenReturn(Optional.of(member));
 
         when(member.getRole())

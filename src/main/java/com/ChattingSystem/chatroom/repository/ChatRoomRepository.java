@@ -46,7 +46,7 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
                    ST_Distance(r.display_center, me.point) AS "distanceM",
                    (SELECT COUNT(*) FROM room_members m WHERE m.room_id = r.id) AS "memberCount",
                    EXISTS (SELECT 1 FROM room_members m
-                           WHERE m.room_id = r.id AND m.user_id = :userId) AS "joined"
+                           WHERE m.room_id = r.id AND m.user_id = :userId AND m.status = 'ACTIVE') AS "joined"
             FROM chat_rooms r,
                  (SELECT CAST(ST_SetSRID(ST_MakePoint(:lng, :lat), 4326) AS geography) AS point) me
             WHERE r.status = 'ACTIVE'

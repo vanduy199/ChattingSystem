@@ -74,7 +74,7 @@ public class ChatRoomController {
                         @AuthenticationPrincipal Jwt jwt,
                         @RequestParam @DecimalMin("-90") @DecimalMax("90") double lat,
                         @RequestParam @DecimalMin("-180") @DecimalMax("180") double lng,
-                        @RequestParam(defaultValue = "1000") @Min(100) @Max(3000) int radius) {
+                        @RequestParam(defaultValue = "1000") @Min(100) @Max(50000) int radius) {
 
                 List<NearbyRoomResponse> rooms = service.findNearby(userIdOf(jwt), lat, lng, radius);
                 return ResponseEntity.ok(ApiResponse.success("Lấy danh sách phòng gần bạn thành công!", rooms));

@@ -15,7 +15,7 @@ public record CreateRoomRequest(
         @NotNull @DecimalMin("-90")  @DecimalMax("90")  Double lat,
         @NotNull @DecimalMin("-180") @DecimalMax("180") Double lng,
         @Min(5) @Max(1440) Integer ttlMinutes,   // null = mặc định 60 phút
-        @Min(100) @Max(3000) Integer radiusM,     // null = mặc định 3000 m
+        @Min(100) @Max(50000) Integer radiusM,     // null = mặc định 3000 m
         @Pattern(regexp = "PUBLIC|PRIVATE", message = "roomType must be one of: PUBLIC, PRIVATE") String roomType
 ) {
     public CreateRoomRequest(String title, String description, Double lat, Double lng, Integer ttlMinutes, Integer radiusM) {

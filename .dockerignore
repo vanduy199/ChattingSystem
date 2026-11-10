@@ -4,7 +4,8 @@
 !.env.example
 
 # build output / tooling
-target/
+target/*
+!target/*.jar
 .git/
 .gitignore
 .idea/

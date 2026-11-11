@@ -15,7 +15,7 @@ Spring Boot 4.1 / Java 25, Maven (use the `./mvnw` wrapper), PostgreSQL + Flyway
 ./mvnw test                                # all tests
 ./mvnw test -Dtest=ChattingSystemApplicationTests              # single class
 ./mvnw test -Dtest=ChattingSystemApplicationTests#contextLoads # single method
-./mvnw test -Dtest='SlugUtilsTest,ReadingTimeCalculatorTest,HtmlSanitizerTest,ImageTypeTest' # unit tests, no DB needed
+./mvnw test -Dtest='SlugUtilsTest,ReadingTimeCalculatorTest,HtmlSanitizerTest,ImageTypeTest,ChatRoomServiceUnitTest,MessageServiceUnitTest,AuthServiceUnitTest' # unit tests, no DB needed
 docker build -t chattingsystem .           # production image (Dockerfile used by Railway)
 ```
 
@@ -44,7 +44,18 @@ There is no linter/formatter configured.
 
 Package-by-feature under `com.ChattingSystem`: `auth`, `user`, `security`, `config`, `post`, `waitlist`, `storage`, `chatroom`, `message`, `realtime`, and cross-cutting `shared` (note the package is spelled `shared.exeption` — keep using that name).
 
-**Auth flow:** the client signs in with Firebase, then `POST /api/v1/auth/login` with `{ idToken }`. `AuthServiceImpl` verifies the token via `FirebaseAuth`, finds the user by `firebaseUid` (or creates one; rejects with `EMAIL_ALREADY_EXISTS` if the email belongs to another uid), and returns an app JWT from `JwtService` (`sub` = firebase uid, claims `userId`, `scope` = `"USER"` or `"USER ADMIN"` from `users.role`). The role is stamped at login, so a promoted user must log in again to get the admin scope. `GET /auth/me` returns `MeResponse` with the role read from the DB. All other endpoints authenticate with that JWT as a Bearer token via Spring's resource-server support configured in `security/config/JwtConfig` + `SecurityConfig` (stateless, CSRF off, `scope` claim → `SCOPE_` authorities).
+**Auth flow:** 
+- **Registered User:** Client signs in with Firebase, then `POST /api/v1/auth/login` with `{ idToken }`. `AuthServiceImpl` verifies the token via `FirebaseAuth`, finds user by `firebaseUid` (or creates one; rejects with `EMAIL_ALREADY_EXISTS` if email belongs to another uid), and returns app JWT from `JwtService` (`sub` = firebase uid, claims `userId`, `scope` = `"USER"` or `"USER ADMIN"` from `users.role`). `GET /auth/me` returns `MeResponse` by `userId`.
+- **Guest / Unregistered User (V9):** Client calls `POST /api/v1/auth/guest` with optional `{ nickname }` (defaults to `"Khách #XXXX"`). Creates `User` with `role = Role.GUEST` (columns `firebase_uid` and `email` are nullable in DB since V9). `JwtService` issues JWT with `sub = "guest:<id>"`, claim `userId`, `scope = "GUEST"`.
+- **Guest Permissions:**
+  - Public rooms: Guest can join (`ACTIVE`) and send messages (via STOMP `@MessageMapping("rooms.{roomId}.send")` or REST `POST /rooms/{roomId}/messages`).
+  - Private rooms: Guest cannot join (403 `LOGIN_REQUIRED_FOR_PRIVATE_ROOM`) and cannot chat (403 `LOGIN_REQUIRED_TO_CHAT`).
+  - Create room: Requires registered user (403 `LOGIN_REQUIRED_TO_CREATE_ROOM`).
+- **Phase 5 (Account Linking / Upgrade):** When a Guest holding a guest JWT (via header `Authorization: Bearer <token>` or body `guestToken`) logs in with Firebase (`POST /api/v1/auth/login`):
+  - *Case 1 (New Firebase User):* Upgrade existing Guest `User` record to `USER` (`firebaseUid`, `email`, `fullName`), keeping the same `userId` so room memberships and messages are preserved without migration.
+  - *Case 2 (Existing Firebase User):* Remove duplicate `room_members` where target user already joined, reassign remaining guest `room_members`, `messages`, and `chat_rooms` to the existing registered `userId`, then delete the temporary guest record.
+
+All other endpoints authenticate with JWT as a Bearer token via Spring's resource-server support configured in `security/config/JwtConfig` + `SecurityConfig` (stateless, CSRF off, `scope` claim → `SCOPE_` authorities).
 
 - `SecurityConfig` matchers are relative to the servlet context path `/api/v1`. Public endpoints must be added to its `permitAll()` list (currently `POST /auth/login`, `GET /posts`, `/posts/**`, `/tags`, `POST /waitlist`, `/error`, and the `/ws` handshake, which is authenticated at the STOMP level instead); keep that list in sync when renaming controller routes. `/admin/**` requires `SCOPE_ADMIN`.
 - Security-layer 401/403 are written as `ErrorResponse` JSON by `security/handler` (`RestAuthenticationEntryPoint`, `RestAccessDeniedHandler`).

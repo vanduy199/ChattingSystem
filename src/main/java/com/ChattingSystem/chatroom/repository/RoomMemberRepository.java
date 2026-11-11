@@ -9,11 +9,12 @@ import com.ChattingSystem.chatroom.entity.MemberStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.lang.reflect.Member;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -81,4 +82,15 @@ public interface RoomMemberRepository
             ORDER BY rm.joinedAt
             """)
     List<RoomMemberResponse> findMembers(@Param("roomId") Long roomId);
+
+    @Query("SELECT rm.roomId FROM RoomMember rm WHERE rm.userId = :userId")
+    List<Long> findRoomIdsByUserId(@Param("userId") Long userId);
+
+    @Modifying(clearAutomatically = true)
+    @Query("DELETE FROM RoomMember rm WHERE rm.userId = :userId AND rm.roomId IN :roomIds")
+    void deleteByUserIdAndRoomIdIn(@Param("userId") Long userId, @Param("roomIds") Collection<Long> roomIds);
+
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE RoomMember rm SET rm.userId = :targetUserId WHERE rm.userId = :guestUserId")
+    int reassignUserId(@Param("guestUserId") Long guestUserId, @Param("targetUserId") Long targetUserId);
 }

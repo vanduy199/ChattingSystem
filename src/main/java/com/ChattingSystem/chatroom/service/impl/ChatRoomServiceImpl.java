@@ -61,6 +61,12 @@ public class ChatRoomServiceImpl implements ChatRoomService {
     @Override
     @Transactional
     public RoomResponse createRoom(Long userId, CreateRoomRequest req) {
+        User user = userRepo.findById(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+        if (user.isGuest()) {
+            throw new AppException(ErrorCode.LOGIN_REQUIRED_TO_CREATE_ROOM);
+        }
+
         long active = roomRepo.countByCreatedByAndStatusAndExpiresAtAfter(userId, RoomStatus.ACTIVE, Instant.now());
         if (active >= MAX_ACTIVE_ROOMS_PER_USER) {
             throw new AppException(ErrorCode.ROOM_LIMIT_REACHED);
@@ -133,6 +139,13 @@ public class ChatRoomServiceImpl implements ChatRoomService {
         RoomMember member;
         ChatRoom room = roomAccess.requireActiveRoom(roomId);
 
+        User user = userRepo.findById(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+
+        if (room != null && "private".equalsIgnoreCase(room.getRoomType()) && user.isGuest()) {
+            throw new AppException(ErrorCode.LOGIN_REQUIRED_FOR_PRIVATE_ROOM);
+        }
+
         Optional<RoomMember> existingOpt = memberRepo.findByRoomIdAndUserId(roomId, userId);
         if (existingOpt.isPresent()) {
             member = existingOpt.get();
@@ -152,9 +165,12 @@ public class ChatRoomServiceImpl implements ChatRoomService {
         } else {
             member = memberRepo.save(RoomMember.create(roomId, userId, MemberRole.MEMBER, MemberStatus.ACTIVE));
         }
-        String fullName = userRepo.findById(userId).map(User::getFullName).orElse(null);
-        events.publishEvent(new RoomEvent(roomId, RoomEventType.MEMBER_JOINED,
-                new MemberEventData(roomId, userId, fullName)));
+
+        if (member.getStatus() == MemberStatus.ACTIVE) {
+            String fullName = user.getFullName();
+            events.publishEvent(new RoomEvent(roomId, RoomEventType.MEMBER_JOINED,
+                    new MemberEventData(roomId, userId, fullName)));
+        }
 
         return new JoinRoomResponse(roomId, userId, member.getRole(), member.getJoinedAt());
     }

@@ -4,6 +4,7 @@ import com.ChattingSystem.message.dto.response.MessageResponse;
 import com.ChattingSystem.message.entity.Message;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -42,4 +43,8 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
             WHERE m.id = :id
             """)
     Optional<MessageResponse> findResponseById(@Param("id") Long id);
+
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE Message m SET m.senderId = :targetUserId WHERE m.senderId = :guestUserId")
+    int reassignSenderId(@Param("guestUserId") Long guestUserId, @Param("targetUserId") Long targetUserId);
 }

@@ -91,4 +91,8 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
 
                 String getRoomType();
         }
+
+        @Modifying(clearAutomatically = true)
+        @Query("UPDATE ChatRoom cr SET cr.createdBy = :targetUserId WHERE cr.createdBy = :guestUserId")
+        int reassignCreatedBy(@Param("guestUserId") Long guestUserId, @Param("targetUserId") Long targetUserId);
 }

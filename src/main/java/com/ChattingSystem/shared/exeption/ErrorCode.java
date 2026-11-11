@@ -40,7 +40,10 @@ public enum ErrorCode {
     ROOM_PRIVATE(HttpStatus.FORBIDDEN, "Phòng chat này là riêng tư, bạn không thể tham gia"),
     NOT_ROOM_OWNER(HttpStatus.FORBIDDEN, "Bạn không phải chủ phòng chat này"),
     INVALID_STATUS(HttpStatus.BAD_REQUEST, "Trạng thái không hợp lệ"),
-    ROOM_MEMBER_PENDING(HttpStatus.FORBIDDEN, "Bạn đã gửi yêu cầu tham gia phòng chat này, vui lòng chờ chủ phòng phê duyệt");
+    ROOM_MEMBER_PENDING(HttpStatus.FORBIDDEN, "Bạn đã gửi yêu cầu tham gia phòng chat này, vui lòng chờ chủ phòng phê duyệt"),
+    LOGIN_REQUIRED_FOR_PRIVATE_ROOM(HttpStatus.FORBIDDEN, "Vui lòng đăng nhập tài khoản để tham gia phòng riêng tư"),
+    LOGIN_REQUIRED_TO_CHAT(HttpStatus.FORBIDDEN, "Vui lòng đăng nhập tài khoản để gửi tin nhắn trong phòng riêng tư"),
+    LOGIN_REQUIRED_TO_CREATE_ROOM(HttpStatus.FORBIDDEN, "Vui lòng đăng nhập tài khoản để tạo phòng chat");
 
     private final HttpStatus httpStatus;
     private final String defaultMessage;

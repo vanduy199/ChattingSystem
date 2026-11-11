@@ -27,7 +27,7 @@ public class SecurityConfig {
                 .cors(Customizer.withDefaults())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(POST, "/auth/login").permitAll()
+                        .requestMatchers(POST, "/auth/login", "/auth/guest").permitAll()
                         .requestMatchers(GET, "/posts", "/posts/**", "/tags").permitAll()
                         .requestMatchers(POST, "/waitlist").permitAll()
                         .requestMatchers("/error").permitAll()

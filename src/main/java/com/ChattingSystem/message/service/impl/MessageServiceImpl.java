@@ -1,5 +1,6 @@
 package com.ChattingSystem.message.service.impl;
 
+import com.ChattingSystem.chatroom.entity.ChatRoom;
 import com.ChattingSystem.chatroom.repository.RoomMemberRepository;
 import com.ChattingSystem.chatroom.service.RoomAccessService;
 import com.ChattingSystem.message.dto.request.SendMessageRequest;
@@ -12,6 +13,8 @@ import com.ChattingSystem.realtime.event.RoomEvent;
 import com.ChattingSystem.realtime.event.RoomEventType;
 import com.ChattingSystem.shared.exeption.AppException;
 import com.ChattingSystem.shared.exeption.ErrorCode;
+import com.ChattingSystem.user.entity.User;
+import com.ChattingSystem.user.repository.UserRepository;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -27,15 +30,18 @@ public class MessageServiceImpl implements MessageService {
 
     private final MessageRepository messageRepo;
     private final RoomMemberRepository memberRepo;
+    private final UserRepository userRepo;
     private final RoomAccessService roomAccess;
     private final ApplicationEventPublisher events;
 
     public MessageServiceImpl(MessageRepository messageRepo,
                               RoomMemberRepository memberRepo,
+                              UserRepository userRepo,
                               RoomAccessService roomAccess,
                               ApplicationEventPublisher events) {
         this.messageRepo = messageRepo;
         this.memberRepo = memberRepo;
+        this.userRepo = userRepo;
         this.roomAccess = roomAccess;
         this.events = events;
     }
@@ -44,6 +50,15 @@ public class MessageServiceImpl implements MessageService {
     @Transactional
     public MessageResponse send(Long userId, Long roomId, SendMessageRequest req) {
         roomAccess.requireActiveMember(userId, roomId);
+
+        ChatRoom room = roomAccess.requireActiveRoom(roomId);
+        if (room != null && "private".equalsIgnoreCase(room.getRoomType())) {
+            User user = userRepo.findById(userId)
+                    .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+            if (user.isGuest()) {
+                throw new AppException(ErrorCode.LOGIN_REQUIRED_TO_CHAT);
+            }
+        }
 
         String content = req.content() == null ? "" : req.content().strip();
         if (content.isEmpty()) {

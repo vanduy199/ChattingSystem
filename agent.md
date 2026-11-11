@@ -28,7 +28,7 @@ Source code nằm tại `src/main/java/com/ChattingSystem/`, được tổ chứ
 ```text
 com.ChattingSystem/
 ├── ChattingSystemApplication.java    # Main Entry Point
-├── auth/                             # Xác thực Firebase -> sinh JWT app
+├── auth/                             # Xác thực Firebase & Guest -> sinh JWT app
 │   ├── controller/
 │   ├── service/ & service/impl/
 │   └── dto/ (request & response)
@@ -56,38 +56,51 @@ com.ChattingSystem/
 
 ---
 
-## 3. Quy chuẩn code (Conventions & Best Practices)
+## 3. Luồng xác thực & Phân quyền (Authentication & Authorization)
 
-Bắt buộc tuân thủ các quy tắc sau khi tạo hoặc sửa đổi mã nguồn:
+### 3.1. Người dùng có tài khoản (Registered User)
+- Đăng nhập Firebase ở Client $\rightarrow$ Gửi ID token lên `POST /api/v1/auth/login`.
+- `AuthServiceImpl` xác thực qua Firebase Admin SDK $\rightarrow$ Sinh JWT có claim `userId`, `scope = "USER"` (hoặc `"USER ADMIN"`).
 
-### 3.1. Dependency Injection & Service Layer
-- **Dependency Injection:** Viết tường minh bằng Constructor Injection (không dùng `@Autowired` lên field, không dùng `@RequiredArgsConstructor` của Lombok).
-- **Service Pattern:** Luôn tách Interface trong `service/` và implementation trong `service/impl/`.
+### 3.2. Khách vãng lai / Chưa có tài khoản (Guest User - V9)
+- Client gọi `POST /api/v1/auth/guest` (có thể kèm `{ nickname }` hoặc hệ thống tự sinh ngẫu nhiên `"Khách #XXXX"`).
+- Tạo bản ghi trong `users` với `role = Role.GUEST` (cột `firebase_uid` và `email` cho phép `NULL` từ migration `V9`).
+- `JwtService` cấp JWT có `scope = "GUEST"` và `subject = "guest:<id>"`.
+- **Quy tắc phân quyền Guest:**
+  - **Phòng PUBLIC:** Guest được phép tham gia (`joinRoom` $\rightarrow$ `ACTIVE`) và chat (qua WebSocket STOMP hoặc REST).
+  - **Phòng PRIVATE:** 
+    - Guest bị chặn khi xin tham gia $\rightarrow$ ném lỗi 403 `LOGIN_REQUIRED_FOR_PRIVATE_ROOM`.
+    - Guest bị chặn khi gửi tin nhắn $\rightarrow$ ném lỗi 403 `LOGIN_REQUIRED_TO_CHAT`.
+  - **Tạo phòng:** Guest bị chặn khi tạo phòng $\rightarrow$ ném lỗi 403 `LOGIN_REQUIRED_TO_CREATE_ROOM`.
 
-### 3.2. DTO & Validation
-- **DTOs:** Sử dụng Java `record`, đặt trong `dto/request/` và `dto/response/`.
-- **Validation:** Sử dụng Jakarta Validation (`@NotBlank`, `@NotNull`, `@Valid`,...).
-
-### 3.3. Response & Exception Handling
-- **API Response:** Mọi response thành công bọc trong `ApiResponse.success(message, data)`. Phân trang dùng `PageResponse.of(page)`.
-- **Exception:** Ném lỗi nghiệp vụ bằng `AppException(ErrorCode.XYZ)` hoặc `AppException.fieldError(fieldName, message)`.
-- Các mã lỗi định nghĩa tập trung trong enum `ErrorCode` (kèm HTTP Status và message tiếng Việt).
-
-### 3.4. JPA Entity & Database
-- Kế thừa từ `BaseEntity`.
-- Không sử dụng public setters.
-- Sử dụng constructor rỗng `protected`, factory method `static create(...)` và các hàm đổi trạng thái theo ngữ cảnh cụ thể (intent-named mutators).
-- **Flyway:** Quản lý toàn bộ database schema (`src/main/resources/db/migration/V{n}__*.sql`).
-  - `ddl-auto: validate`: Mọi thay đổi về Entity phải có file SQL migration tương ứng.
-  - **Tuyệt đối không chỉnh sửa file migration đã áp dụng.**
-
-### 3.5. Bảo mật & Tọa độ địa lý
-- **Tọa độ thực (center):** Tọa độ chính xác của phòng chat **không bao giờ được gửi về Client**. Chỉ trả về khoảng cách tương đối qua `DistanceLabel` (ví dụ: "Dưới 100 m",...).
-- **Context Path:** `/api/v1`. Các endpoint công khai (`permitAll`) phải khai báo trong `SecurityConfig`. Đường dẫn `/admin/**` yêu cầu role `SCOPE_ADMIN`.
+### 3.3. Giai đoạn 5: Liên kết / Nâng cấp tài khoản Khách (Account Linking & Upgrade)
+Khi người dùng đang ở chế độ Khách (gửi header `Authorization: Bearer <guest_token>` hoặc truyền `{ idToken, guestToken }` trong body) bấm đăng nhập Firebase (`POST /api/v1/auth/login`):
+- **Trường hợp 1 (Tài khoản Firebase mới):**
+  - Nâng cấp trực tiếp bản ghi User Khách hiện tại: gán `firebase_uid`, `email`, `fullName` (theo Firebase), đổi `role = Role.USER`.
+  - Giữ nguyên `userId`, bảo toàn toàn bộ lịch sử tin nhắn và các phòng chat đã tham gia.
+- **Trường hợp 2 (Tài khoản Firebase đã có sẵn):**
+  - Xóa các bản ghi `room_members` của Khách tại các phòng mà tài khoản thật đã tham gia (tránh vi phạm unique `(room_id, user_id)`).
+  - Di chuyển các `room_members` còn lại của Khách sang tài khoản thật (`userId = targetUserId`).
+  - Di chuyển toàn bộ tin nhắn (`messages.sender_id`) sang tài khoản thật.
+  - Chuyển phòng đã tạo (`chat_rooms.created_by`) nếu có.
+  - Xóa tài khoản Khách tạm thời và cấp JWT cho tài khoản thật.
 
 ---
 
-## 4. Các lệnh phát triển (Commands)
+## 4. Quy chuẩn code (Conventions & Best Practices)
+
+- **Dependency Injection:** Viết tường minh bằng Constructor Injection (không dùng `@Autowired` lên field, không dùng `@RequiredArgsConstructor` của Lombok).
+- **Service Pattern:** Luôn tách Interface trong `service/` và implementation trong `service/impl/`.
+- **DTOs:** Sử dụng Java `record`, đặt trong `dto/request/` và `dto/response/`.
+- **Validation:** Sử dụng Jakarta Validation (`@NotBlank`, `@NotNull`, `@Valid`,...).
+- **API Response:** Mọi response thành công bọc trong `ApiResponse.success(message, data)`. Phân trang dùng `PageResponse.of(page)`.
+- **Exception:** Ném lỗi nghiệp vụ bằng `AppException(ErrorCode.XYZ)` hoặc `AppException.fieldError(fieldName, message)`.
+- **Flyway:** `ddl-auto: validate`. Mọi thay đổi Entity phải có file SQL migration tương ứng (`V{n}__*.sql`). Tuyệt đối không sửa file cũ.
+- **Tọa độ thực (center):** Tọa độ chính xác của phòng chat **không bao giờ được gửi về Client**. Chỉ trả về khoảng cách tương đối qua `DistanceLabel`.
+
+---
+
+## 5. Các lệnh phát triển (Commands)
 
 ```bash
 # 1. Chạy ứng dụng local (tự động load .env)
@@ -96,29 +109,9 @@ Bắt buộc tuân thủ các quy tắc sau khi tạo hoặc sửa đổi mã ng
 # 2. Build ứng dụng
 ./mvnw clean package -DskipTests
 
-# 3. Chạy unit tests (không phụ thuộc database)
-./mvnw test -Dtest='SlugUtilsTest,ReadingTimeCalculatorTest,HtmlSanitizerTest,ImageTypeTest'
+# 3. Chạy unit tests độc lập (không phụ thuộc database)
+./mvnw test -Dtest='SlugUtilsTest,ReadingTimeCalculatorTest,HtmlSanitizerTest,ImageTypeTest,ChatRoomServiceUnitTest,MessageServiceUnitTest,AuthServiceUnitTest'
 
-# 4. Chạy toàn bộ test (CHÚ Ý: Dùng container PostGIS local, KHÔNG chạy test lên DB Production/Cloud trong .env)
-docker run -d --name chatchit-test-pg -e POSTGRES_DB=chatchit -e POSTGRES_USER=chatchit -e POSTGRES_PASSWORD=chatchit -p 55432:5432 postgis/postgis:17-3.5
-docker run -d --name chatchit-test-redis -p 56379:6379 redis:7
-SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:55432/chatchit SPRING_DATASOURCE_USERNAME=chatchit SPRING_DATASOURCE_PASSWORD=chatchit SPRING_DATA_REDIS_URL=redis://localhost:56379 ./mvnw test
-
-# 5. Build Docker Image
+# 4. Build Docker Image
 docker build -t chattingsystem .
 ```
-
----
-
-## 5. Biến môi trường quan trọng (`.env`)
-
-| Biến | Ý nghĩa | Ghi chú |
-| :--- | :--- | :--- |
-| `PORT` | Cổng HTTP Server | Mặc định `8080` |
-| `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USERNAME`, `DB_PASSWORD` | Kết nối PostgreSQL + PostGIS | Database cloud/Supabase hoặc local container |
-| `REDIS_URL` | Địa chỉ Redis | Mặc định `redis://localhost:6379` |
-| `FIREBASE_SERVICE_ACCOUNT` | Nội dung JSON raw của Firebase Service Account | Cung cấp dưới dạng chuỗi JSON thô |
-| `JWT_SECRET_KEY` | Khóa bí mật HMAC-SHA256 | Tối thiểu 32 bytes |
-| `JWT_ACCESS_EXPIRATION`, `JWT_REFRESH_EXPIRATION` | Thời hạn JWT | Ví dụ: `15m`, `30d` |
-| `CORS_ALLOWED_ORIGINS` | Danh sách domain CORS cho phép | Phân tách bởi dấu phẩy |
-| `STORAGE_*` | Cấu hình Cloudflare R2 / S3 | Endpoint, bucket, access key, secret key |

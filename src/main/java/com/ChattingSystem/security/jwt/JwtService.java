@@ -26,8 +26,12 @@ public class JwtService {
     public String generateAccessToken(User user) {
         Instant now = Instant.now();
 
+        String subject = user.getFirebaseUid() != null
+                ? user.getFirebaseUid()
+                : "guest:" + user.getId();
+
         JwtClaimsSet claims = JwtClaimsSet.builder()
-                .subject(user.getFirebaseUid())
+                .subject(subject)
                 .id(UUID.randomUUID().toString())
                 .issuer("ChattingSystem")
                 .issuedAt(now)
@@ -49,6 +53,9 @@ public class JwtService {
 
     /** Space-separated scopes, mapped to {@code SCOPE_*} authorities by {@code JwtConfig}. */
     private static String scopeOf(User user) {
+        if (user.isGuest()) {
+            return "GUEST";
+        }
         return user.isAdmin() ? "USER ADMIN" : "USER";
     }
 }

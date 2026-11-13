@@ -40,7 +40,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
-        registry.addEndpoint("/ws")
+        registry.addEndpoint("/ws", "/ws/")
                 .setAllowedOrigins(corsProperties.allowedOrigins().toArray(String[]::new));
         // Không bật setPreserveReceiveOrder: khi đó lỗi ở CONNECT chạy trên thread khác,
         // server không gửi frame ERROR và client treo thay vì được báo token sai

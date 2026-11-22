@@ -79,6 +79,7 @@ public class RoomMemberServiceImpl implements RoomMemberService {
                                 new MemberEventData(roomId, userId, fullName)));
         }
 
+        @Override
         public void acceptJoinRequest(Long userId, Long roomId, Long targetUserId, String status) {
                 ChatRoom room = chatRoomRepository.findById(roomId)
                                 .orElseThrow(() -> new AppException(ErrorCode.ROOM_NOT_FOUND));

@@ -34,7 +34,7 @@ build/
 
 # Environment variables
 .env
-CLAUDE.md
+
 # Compiled class file
 *.class
 
@@ -60,5 +60,6 @@ CLAUDE.md
 hs_err_pid*
 replay_pid*
 
-AGENT.md
-agent.md
+# Ignore all Markdown files except CLAUDE.md
+*.md
+!CLAUDE.md

@@ -36,6 +36,7 @@ import java.util.Optional;
 
 @Service
 public class ChatRoomServiceImpl implements ChatRoomService {
+    private static final int DEFAULT_TTL_MIN = 60;
     private static final int DEFAULT_RADIUS_M = 3000;
     private static final int MAX_ACTIVE_ROOMS_PER_USER = 3;
 
@@ -72,7 +73,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
             throw new AppException(ErrorCode.ROOM_LIMIT_REACHED);
         }
 
-        int ttl = req.ttlMinutes() != null ? req.ttlMinutes() : 0;
+        int ttl = req.ttlMinutes() != null ? req.ttlMinutes() : DEFAULT_TTL_MIN;
         int radius = req.radiusM() != null ? req.radiusM() : DEFAULT_RADIUS_M;
 
         // flush để row tồn tại trước khi UPDATE center

@@ -44,6 +44,11 @@ spring:
     compose:
       enabled: false
 
+  task:
+    scheduling:
+      pool:
+        size: 3
+
 firebase:
   service-account: ${FIREBASE_SERVICE_ACCOUNT}
 
@@ -62,3 +67,65 @@ storage:
   access-key: ${STORAGE_ACCESS_KEY:}
   secret-key: ${STORAGE_SECRET_KEY:}
   public-base-url: ${STORAGE_PUBLIC_BASE_URL:}
+
+media:
+  storage:
+    bucket: ${MEDIA_STORAGE_BUCKET:}
+    region: ${MEDIA_STORAGE_REGION:us-east-1}
+    endpoint: ${MEDIA_STORAGE_ENDPOINT:}
+    public-endpoint: ${MEDIA_STORAGE_PUBLIC_ENDPOINT:}
+    path-style: ${MEDIA_STORAGE_PATH_STYLE:false}
+    access-key: ${MEDIA_STORAGE_ACCESS_KEY:}
+    secret-key: ${MEDIA_STORAGE_SECRET_KEY:}
+    chunk-size-bytes: 5242880
+    put-url-ttl: PT15M
+    get-url-ttl: PT30M
+  upload:
+    session-ttl: PT24H
+  limits:
+    image-max-bytes:
+      guest: ${MEDIA_LIMIT_IMAGE_GUEST:5242880}
+      public: ${MEDIA_LIMIT_IMAGE_PUBLIC:20971520}
+      private: ${MEDIA_LIMIT_IMAGE_PRIVATE:26214400}
+    video-max-bytes:
+      guest: ${MEDIA_LIMIT_VIDEO_GUEST:20971520}
+      public: ${MEDIA_LIMIT_VIDEO_PUBLIC:52428800}
+      private: ${MEDIA_LIMIT_VIDEO_PRIVATE:104857600}
+    max-files-per-message:
+      guest: 2
+      public: 5
+      private: 10
+    max-open-uploads:
+      guest: 3
+      public: 10
+      private: 10
+    max-init-per-minute:
+      guest: 10
+      public: 30
+      private: 30
+  quota:
+    zone: Asia/Ho_Chi_Minh
+    hd-per-day: 5
+  worker:
+    enabled: ${MEDIA_WORKER_ENABLED:true}
+    concurrency: 1
+    poll-interval: PT2S
+    job-timeout: PT10M
+    max-attempts: 4
+    temp-dir: ${MEDIA_WORKER_TEMP_DIR:/tmp/media-work}
+    max-download-bytes: 268435456
+    max-pixels: 50000000
+    max-video-duration-seconds: 300
+  gc:
+    enabled: ${MEDIA_GC_ENABLED:true}
+    cron: ${MEDIA_GC_CRON:0 0 * * * *}
+    batch-size: 200
+    max-batches-per-run: 20
+    orphan-ttl: P7D
+    purge-grace: PT24H
+    creating-timeout: PT10M
+    completing-timeout: PT15M
+    failed-ttl: P1D
+    uploading-ttl: PT24H
+    storage-claim-lease: PT10M
+

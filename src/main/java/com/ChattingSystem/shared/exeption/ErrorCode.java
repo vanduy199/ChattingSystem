@@ -43,7 +43,22 @@ public enum ErrorCode {
     ROOM_MEMBER_PENDING(HttpStatus.FORBIDDEN, "Bạn đã gửi yêu cầu tham gia phòng chat này, vui lòng chờ chủ phòng phê duyệt"),
     LOGIN_REQUIRED_FOR_PRIVATE_ROOM(HttpStatus.FORBIDDEN, "Vui lòng đăng nhập tài khoản để tham gia phòng riêng tư"),
     LOGIN_REQUIRED_TO_CHAT(HttpStatus.FORBIDDEN, "Vui lòng đăng nhập tài khoản để gửi tin nhắn trong phòng riêng tư"),
-    LOGIN_REQUIRED_TO_CREATE_ROOM(HttpStatus.FORBIDDEN, "Vui lòng đăng nhập tài khoản để tạo phòng chat");
+    LOGIN_REQUIRED_TO_CREATE_ROOM(HttpStatus.FORBIDDEN, "Vui lòng đăng nhập tài khoản để tạo phòng chat"),
+
+    // Media & Upload errors
+    MEDIA_NOT_FOUND(HttpStatus.NOT_FOUND, "Không tìm thấy tệp phương tiện"),
+    MEDIA_DELETED(HttpStatus.GONE, "Tệp phương tiện đã bị xóa"),
+    MEDIA_NOT_READY(HttpStatus.CONFLICT, "Tệp phương tiện chưa sẵn sàng để sử dụng"),
+    UPLOAD_EXPIRED(HttpStatus.GONE, "Phiên tải lên đã hết hạn"),
+    UPLOAD_IN_PROGRESS(HttpStatus.CONFLICT, "Tệp đang trong quá trình xử lý, vui lòng thử lại sau"),
+    UPLOAD_INCOMPLETE(HttpStatus.CONFLICT, "Tệp chưa tải lên hoàn tất hoặc thiếu mảnh"),
+    UPLOAD_SIZE_MISMATCH(HttpStatus.UNPROCESSABLE_ENTITY, "Kích thước tệp thực tế không khớp với khai báo"),
+    MEDIA_TOO_LARGE(HttpStatus.PAYLOAD_TOO_LARGE, "Dung lượng tệp vượt quá giới hạn cho phép"),
+    UNSUPPORTED_MEDIA_TYPE(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "Định dạng tệp không được hỗ trợ"),
+    INVALID_MEDIA_SIGNATURE(HttpStatus.UNPROCESSABLE_ENTITY, "Nội dung tệp không khớp với định dạng khai báo"),
+    TOO_MANY_ATTACHMENTS(HttpStatus.UNPROCESSABLE_ENTITY, "Vượt quá số lượng tệp đính kèm cho phép"),
+    HD_QUOTA_EXCEEDED(HttpStatus.TOO_MANY_REQUESTS, "Bạn đã dùng hết hạn mức tải ảnh/video HD trong ngày"),
+    UPLOAD_RATE_LIMITED(HttpStatus.TOO_MANY_REQUESTS, "Bạn đang khởi tạo quá nhiều phiên tải lên, vui lòng thử lại sau");
 
     private final HttpStatus httpStatus;
     private final String defaultMessage;

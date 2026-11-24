@@ -50,4 +50,8 @@ public class Message extends BaseEntity {
     public static Message text(Long roomId, Long senderId, UUID clientMessageId, String content) {
         return new Message(roomId, senderId, clientMessageId, MessageType.TEXT, content);
     }
+
+    public static Message media(Long roomId, Long senderId, UUID clientMessageId, String content) {
+        return new Message(roomId, senderId, clientMessageId, MessageType.MEDIA, content == null ? "" : content);
+    }
 }

@@ -2,6 +2,7 @@ package com.ChattingSystem.realtime.event;
 
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
 @Component
@@ -18,7 +19,7 @@ public class RoomEventBroadcaster {
     }
 
     // Chỉ gửi khi dữ liệu đã commit, để client không nhận tin mà REST chưa đọc được
-    @TransactionalEventListener(fallbackExecution = true)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void on(RoomEvent event) {
         messagingTemplate.convertAndSend(topicOf(event.roomId()), event.payload());
     }
